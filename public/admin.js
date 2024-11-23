@@ -2,11 +2,12 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     const imageGrid = document.querySelector('.image-grid');
+    const basePath = window.appConfig?.basePath || '';
     
     // Function to load and display images
     async function loadImages() {
         try {
-            const response = await fetch('/christmas/api/images');
+            const response = await fetch(`${basePath}/api/images`);
             const images = await response.json();
             
             // Clear existing images
@@ -79,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function deleteImage(image) {
         if (confirm('Are you sure you want to delete this image?')) {
             try {
-                const response = await fetch('/christmas/api/images/delete', {
+                const response = await fetch(`${basePath}/api/images/delete`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -102,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to set an image as the current display
     async function setAsDisplay(image) {
         try {
-            const response = await fetch('/christmas/api/images/display', {
+            const response = await fetch(`${basePath}/api/images/display`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

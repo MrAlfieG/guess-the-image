@@ -1,10 +1,11 @@
 // Frontend logic for the questionnaire
 document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('questionnaire');
+    const basePath = window.appConfig?.basePath || '';
     
     try {
         // Fetch questions from the server
-        const response = await fetch('/christmas/api/questions');
+        const response = await fetch(`${basePath}/api/questions`);
         if (!response.ok) {
             throw new Error('Failed to fetch questions');
         }
@@ -165,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const answers = {};
                 
                 // Get questions to check for excludeFromPrompt
-                const response = await fetch('/christmas/api/questions');
+                const response = await fetch(`${basePath}/api/questions`);
                 const questions = await response.json();
                 
                 // Create a map of question IDs to their configurations
@@ -238,7 +239,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             try {
-                const response = await fetch('/christmas/api/questions/generate', {
+                const response = await fetch(`${basePath}/api/questions/generate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

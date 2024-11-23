@@ -10,11 +10,12 @@ const multer = require('multer');
 
 const app = express();
 const port = 3000;
+const basePath = config.basePath || '';
 
 // Middleware
 app.use(bodyParser.json());
-app.use('/christmas', express.static('.'));
-app.use('/christmas/stored-images', express.static('stored-images'));
+app.use(basePath, express.static('.'));
+app.use(`${basePath}/stored-images`, express.static('stored-images'));
 
 // Configure multer for multiple file uploads
 const upload = multer({
@@ -98,24 +99,24 @@ function generatePromptFromTemplate(template, answer) {
 }
 
 // Serve static files
-app.get('/christmas', (req, res) => {
+app.get(basePath || '/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.get('/christmas/admin', (req, res) => {
+app.get(`${basePath}/admin`, (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-app.get('/christmas/display', (req, res) => {
+app.get(`${basePath}/display`, (req, res) => {
     res.sendFile(path.join(__dirname, 'display.html'));
 });
 
-app.get('/christmas/presenter', (req, res) => {
+app.get(`${basePath}/presenter`, (req, res) => {
     res.sendFile(path.join(__dirname, 'presenter.html'));
 });
 
 // Get questions endpoint
-app.get('/christmas/api/questions', async (req, res) => {
+app.get(`${basePath}/api/questions`, async (req, res) => {
     try {
         const questions = await loadQuestions();
         console.log('Loaded questions:', questions); // Debug log
@@ -127,7 +128,7 @@ app.get('/christmas/api/questions', async (req, res) => {
 });
 
 // Generate image endpoint
-app.post('/christmas/api/questions/generate', async (req, res) => {
+app.post(`${basePath}/api/questions/generate`, async (req, res) => {
     try {
         const { answers } = req.body;
         console.log('Received answers:', answers);
@@ -240,7 +241,7 @@ app.post('/christmas/api/questions/generate', async (req, res) => {
 });
 
 // Handle form submission
-app.post('/christmas/submit', async (req, res) => {
+app.post(`${basePath}/submit`, async (req, res) => {
     try {
         const answers = req.body;
         console.log('Received answers:', answers);
@@ -347,7 +348,7 @@ app.post('/christmas/submit', async (req, res) => {
 });
 
 // Get all images endpoint
-app.get('/christmas/api/images', async (req, res) => {
+app.get(`${basePath}/api/images`, async (req, res) => {
     try {
         const imagesJsonPath = path.join(__dirname, 'generated-images.json');
         let images = [];
@@ -373,7 +374,7 @@ app.get('/christmas/api/images', async (req, res) => {
 });
 
 // Delete an image
-app.post('/christmas/api/images/delete', async (req, res) => {
+app.post(`${basePath}/api/images/delete`, async (req, res) => {
     try {
         const { imageUrl } = req.body;
         console.log('Delete request received for image:', imageUrl);
@@ -484,7 +485,7 @@ app.post('/christmas/api/images/delete', async (req, res) => {
 });
 
 // Get display image
-app.get('/christmas/api/images/display', async (req, res) => {
+app.get(`${basePath}/api/images/display`, async (req, res) => {
     try {
         const displayImageFile = path.join(__dirname, 'display-image.json');
         let displayImage = { url: '', createdBy: '', showCreatedBy: true };
@@ -509,7 +510,7 @@ app.get('/christmas/api/images/display', async (req, res) => {
 });
 
 // Set display image
-app.post('/christmas/api/images/display', async (req, res) => {
+app.post(`${basePath}/api/images/display`, async (req, res) => {
     try {
         const { url, createdBy, showCreatedBy } = req.body;
         
@@ -544,7 +545,7 @@ app.post('/christmas/api/images/display', async (req, res) => {
 });
 
 // Toggle creator visibility
-app.post('/christmas/api/images/display/toggle-creator', async (req, res) => {
+app.post(`${basePath}/api/images/display/toggle-creator`, async (req, res) => {
     try {
         const { showCreatedBy } = req.body;
         
@@ -584,7 +585,7 @@ app.post('/christmas/api/images/display/toggle-creator', async (req, res) => {
 });
 
 // Get auto-display setting
-app.get('/christmas/api/images/display/auto-display', async (req, res) => {
+app.get(`${basePath}/api/images/display/auto-display`, async (req, res) => {
     try {
         const displayImage = await readDisplayImage();
         res.json({ autoDisplay: displayImage.autoDisplay !== false });
@@ -595,7 +596,7 @@ app.get('/christmas/api/images/display/auto-display', async (req, res) => {
 });
 
 // Toggle auto-display setting
-app.post('/christmas/api/images/display/toggle-auto-display', async (req, res) => {
+app.post(`${basePath}/api/images/display/toggle-auto-display`, async (req, res) => {
     try {
         const { autoDisplay } = req.body;
         const displayImage = await readDisplayImage();
@@ -619,7 +620,7 @@ app.post('/christmas/api/images/display/toggle-auto-display', async (req, res) =
 });
 
 // Update image upload endpoint to handle multiple files
-app.post('/christmas/api/images/upload', upload.array('imageFile'), async (req, res) => {
+app.post(`${basePath}/api/images/upload`, upload.array('imageFile'), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ success: false, message: 'No files uploaded' });
@@ -647,7 +648,7 @@ app.post('/christmas/api/images/upload', upload.array('imageFile'), async (req, 
 });
 
 // Add endpoint to update image answer
-app.post('/christmas/api/images/update-answer', async (req, res) => {
+app.post(`${basePath}/api/images/update-answer`, async (req, res) => {
     try {
         const { url, answer } = req.body;
         if (!url) {
@@ -679,7 +680,7 @@ app.post('/christmas/api/images/update-answer', async (req, res) => {
 });
 
 // Image generation endpoint
-app.post('/christmas/api/images/generate', async (req, res) => {
+app.post(`${basePath}/api/images/generate`, async (req, res) => {
     try {
         const { prompt, createdBy } = req.body;
         
@@ -746,7 +747,7 @@ app.post('/christmas/api/images/generate', async (req, res) => {
 });
 
 // Reorder images endpoint
-app.post('/christmas/api/images/reorder', async (req, res) => {
+app.post(`${basePath}/api/images/reorder`, async (req, res) => {
     try {
         const { images } = req.body;
         
