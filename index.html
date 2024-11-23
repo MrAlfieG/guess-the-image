@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Fun Questionnaire</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h2 class="card-title text-center mb-4">Christmas Fun Questionnaire</h2>
+                        <form id="questionnaire">
+                            <div id="questions-container">
+                                <!-- Questions will be dynamically added here -->
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <span class="submit-text">Submit Answers</span>
+                                <span class="loading-spinner d-none">
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    Processing Request...
+                                </span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Fetch questions from server
+        fetch('/api/questions')
+            .then(response => response.json())
+            .then(questions => {
+                const container = document.getElementById('questions-container');
+                
+                questions.forEach((question, index) => {
+                    const questionDiv = document.createElement('div');
+                    questionDiv.className = 'mb-4';
+                    
+                    let inputHtml = '';
+                    if (question.type === 'select' && question.options) {
+                        inputHtml = `
+                            <select class="form-select" name="question-${question.id}" required>
+                                <option value="">Please select...</option>
+                                ${Object.keys(question.options).map(option => 
+                                    `<option value="${option}">${option}</option>`
+                                ).join('')}
+                            </select>`;
+                    } else {
+                        inputHtml = `<input type="text" class="form-control" name="question-${question.id}" required>`;
+                    }
+                    
+                    questionDiv.innerHTML = `
+                        <label class="form-label">${question.question}</label>
+                        ${inputHtml}
+                    `;
+                    container.appendChild(questionDiv);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching questions:', error);
+                document.querySelector('#questions-container').innerHTML = 
+                    '<p class="text-danger">Error loading questions</p>';
+            });
+
+        // Handle form submission
+        document.querySelector('#questionnaire').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = this;
+            form.classList.add('processing');
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            const formData = new FormData(form);
+            const answers = {};
+            formData.forEach((value, key) => {
+                answers[key] = value;
+            });
+
+            try {
+                const response = await fetch('/api/questions/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ answers })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    form.innerHTML = `
+                        <div class="alert alert-success">
+                            <h4 class="alert-heading">Thank you!</h4>
+                            <p>Your request has been processed successfully.</p>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button type="button" class="btn btn-primary" onclick="resetForm()">Try Another One</button>
+                                <button type="button" class="btn btn-secondary" onclick="window.close()">Close Window</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.error || 'Failed to process request');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert alert-danger mt-3';
+                errorDiv.textContent = 'Error processing request. Please try again.';
+                form.appendChild(errorDiv);
+            } finally {
+                form.classList.remove('processing');
+                submitButton.disabled = false;
+            }
+        });
+
+        async function resetForm() {
+            const form = document.getElementById('questionnaire');
+            form.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            await loadQuestions();
+        }
+
+        async function loadQuestions() {
+            const response = await fetch('/api/questions');
+            const questions = await response.json();
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '';
+            questions.forEach((question, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'mb-4';
+                
+                let inputHtml = '';
+                if (question.type === 'select' && question.options) {
+                    inputHtml = `
+                        <select class="form-select" name="question-${question.id}" required>
+                            <option value="">Please select...</option>
+                            ${Object.keys(question.options).map(option => 
+                                `<option value="${option}">${option}</option>`
+                            ).join('')}
+                        </select>`;
+                } else {
+                    inputHtml = `<input type="text" class="form-control" name="question-${question.id}" required>`;
+                }
+                
+                questionDiv.innerHTML = `
+                    <label class="form-label">${question.question}</label>
+                    ${inputHtml}
+                `;
+                container.appendChild(questionDiv);
+            });
+            const form = document.getElementById('questionnaire');
+            form.innerHTML = `
+                <div id="questions-container"></div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <span class="submit-text">Sumbit Form</span>
+                    <span class="loading-spinner d-none">
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Processing Request...
+                    </span>
+                </button>
+            `;
+            document.querySelector('#questionnaire').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const form = this;
+                form.classList.add('processing');
+                const submitButton = form.querySelector('button[type="submit"]');
+                submitButton.disabled = true;
+
+                const formData = new FormData(form);
+                const answers = {};
+                formData.forEach((value, key) => {
+                    answers[key] = value;
+                });
+
+                try {
+                    const response = await fetch('/api/questions/generate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ answers })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        form.innerHTML = `
+                            <div class="alert alert-success">
+                                <h4 class="alert-heading">Thank you!</h4>
+                                <p>Your request has been processed successfully.</p>
+                                <hr>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button type="button" class="btn btn-primary" onclick="resetForm()">Try Another One</button>
+                                    <button type="button" class="btn btn-secondary" onclick="window.close()">Close Window</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        throw new Error(result.error || 'Failed to process request');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'alert alert-danger mt-3';
+                    errorDiv.textContent = 'Error processing request. Please try again.';
+                    form.appendChild(errorDiv);
+                } finally {
+                    form.classList.remove('processing');
+                    submitButton.disabled = false;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

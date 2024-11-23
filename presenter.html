@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presenter View</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            touch-action: manipulation;
+        }
+        .slide-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .current-slide {
+            flex: 2;
+            min-height: 60vh;
+        }
+        .next-slide {
+            flex: 1;
+            min-height: 30vh;
+            opacity: 0.7;
+        }
+        .image-container {
+            position: relative;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+        }
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .answer-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            font-size: 1.2em;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        .show-answer .answer-overlay {
+            transform: translateY(0);
+        }
+        .controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+        }
+        .btn-outline-light {
+            border-width: 2px;
+        }
+        .next-label {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        /* Hide scrollbar but keep functionality */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        /* For Firefox */
+        * {
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <!-- Current Slide -->
+        <div class="current-slide">
+            <div class="image-container" id="currentSlide">
+                <img src="" alt="Current Image" id="currentImage">
+                <div class="answer-overlay" id="currentAnswer"></div>
+            </div>
+        </div>
+
+        <!-- Next Slide -->
+        <div class="next-slide">
+            <div class="image-container" id="nextSlide">
+                <div class="next-label">Next</div>
+                <img src="" alt="Next Image" id="nextImage">
+                <div class="answer-overlay" id="nextAnswer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <div class="btn-group w-100">
+                        <button class="btn btn-outline-light" onclick="previousImage()">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </button>
+                        <button class="btn btn-outline-light" onclick="toggleAnswer()">
+                            Toggle Answer
+                        </button>
+                        <button class="btn btn-outline-light" onclick="nextImage()">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css"></script>
+    <script>
+        let currentImageIndex = 0;
+        let totalImages = 0;
+        let images = [];
+        let showAnswer = false;
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadImages();
+            updateSlides();
+            
+            // Add swipe handlers
+            document.addEventListener('touchstart', handleTouchStart);
+            document.addEventListener('touchend', handleTouchEnd);
+        });
+
+        // Touch handling
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        function handleTouchStart(event) {
+            touchStartX = event.touches[0].clientX;
+        }
+
+        function handleTouchEnd(event) {
+            touchEndX = event.changedTouches[0].clientX;
+            handleSwipe();
+        }
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const swipeDistance = touchEndX - touchStartX;
+
+            if (Math.abs(swipeDistance) > swipeThreshold) {
+                if (swipeDistance > 0) {
+                    previousImage(); // Swipe right
+                } else {
+                    nextImage(); // Swipe left
+                }
+            }
+        }
+
+        async function loadImages() {
+            try {
+                const response = await fetch('/api/images');
+                if (!response.ok) throw new Error('Failed to load images');
+                images = await response.json();
+                // Filter out any null or invalid entries
+                images = images.filter(img => img && img.localPath);
+                totalImages = images.length;
+                
+                // Only try to find the current image index if we have a current display image
+                const displayResponse = await fetch('/api/images/display');
+                if (displayResponse.ok) {
+                    const displayImage = await displayResponse.json();
+                    if (displayImage && displayImage.url) {
+                        currentImageIndex = images.findIndex(img => 
+                            img && (img.localPath === displayImage.url || img.url === displayImage.url)
+                        );
+                    }
+                }
+                
+                // Ensure currentImageIndex is valid
+                if (currentImageIndex === -1 || currentImageIndex >= totalImages) {
+                    currentImageIndex = 0;
+                }
+            } catch (error) {
+                console.error('Error loading images:', error);
+                showToast('Failed to load images', 'danger');
+            }
+        }
+
+        async function updateSlides() {
+            if (images.length === 0) return;
+
+            // Update current slide
+            const currentImage = images[currentImageIndex];
+            document.getElementById('currentImage').src = currentImage.localPath || currentImage.url;
+            document.getElementById('currentAnswer').textContent = currentImage.createdBy || 'No answer set';
+
+            // Update display page
+            try {
+                await fetch('/api/images/display', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: currentImage.localPath || currentImage.url
+                    })
+                });
+            } catch (error) {
+                console.error('Error updating display:', error);
+                showToast('Failed to update display', 'danger');
+            }
+
+            // Update next slide
+            const nextIndex = (currentImageIndex + 1) % totalImages;
+            const nextImage = images[nextIndex];
+            document.getElementById('nextImage').src = nextImage.localPath || nextImage.url;
+            document.getElementById('nextAnswer').textContent = nextImage.createdBy || 'No answer set';
+
+            // Update answer visibility
+            document.getElementById('currentSlide').classList.toggle('show-answer', showAnswer);
+            document.getElementById('nextSlide').classList.toggle('show-answer', showAnswer);
+        }
+
+        function nextImage() {
+            currentImageIndex = (currentImageIndex + 1) % totalImages;
+            updateSlides();
+        }
+
+        function previousImage() {
+            currentImageIndex = (currentImageIndex - 1 + totalImages) % totalImages;
+            updateSlides();
+        }
+
+        async function toggleAnswer() {
+            showAnswer = !showAnswer;
+            document.getElementById('currentSlide').classList.toggle('show-answer', showAnswer);
+            document.getElementById('nextSlide').classList.toggle('show-answer', showAnswer);
+
+            // Sync with display page
+            try {
+                const response = await fetch('/api/images/display');
+                if (!response.ok) throw new Error('Failed to get current display data');
+                const currentDisplay = await response.json();
+
+                await fetch('/api/images/display', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: currentDisplay.url,
+                        createdBy: currentDisplay.createdBy,
+                        showCreatedBy: showAnswer
+                    })
+                });
+            } catch (error) {
+                console.error('Error syncing answer visibility:', error);
+                showToast('Failed to sync answer visibility', 'danger');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toastContainer = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    previousImage();
+                    break;
+                case 'ArrowRight':
+                    nextImage();
+                    break;
+                case ' ':  // Spacebar
+                    e.preventDefault();
+                    toggleAnswer();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
