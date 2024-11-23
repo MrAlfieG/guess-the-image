@@ -161,12 +161,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Function to generate prompt from form data
         async function generatePrompt(previewOnly = false) {
             try {
-                const form = document.getElementById('questionnaire');
                 const formData = new FormData(form);
                 const answers = {};
                 
                 // Get questions to check for excludeFromPrompt
                 const response = await fetch(`${basePath}/api/questions`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch questions');
+                }
                 const questions = await response.json();
                 
                 // Create a map of question IDs to their configurations
@@ -177,18 +179,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 // Process each form field
                 for (let [name, value] of formData.entries()) {
-                    answers[name] = value;
-                    
-                    // Get the question ID from the field name
                     const questionId = parseInt(name.replace('question-', ''));
                     const question = questionMap[questionId];
                     
+                    if (!question) continue;
+                    
                     // If it's a select question, get the value from options
-                    if (question && question.type === 'select') {
-                        const selectedValue = question.options[value];
-                        if (selectedValue) {
-                            answers[name] = selectedValue;
-                        }
+                    if (question.type === 'select' && question.options[value]) {
+                        answers[name] = question.options[value];
+                    } else {
+                        answers[name] = value;
                     }
                 }
                 
@@ -231,14 +231,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const prompt = await generatePrompt();
+            const submitButton = form.querySelector('button[type="submit"]');
+            const originalButtonContent = submitButton.innerHTML;
             
-            if (!prompt) {
-                showToast('Please fill in at least one field to generate an image.', 'danger');
-                return;
-            }
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Generating Image...
+            `;
 
             try {
+                const prompt = await generatePrompt();
+                
+                if (!prompt) {
+                    showToast('Please fill in at least one field to generate an image.', 'danger');
+                    return;
+                }
+
                 const response = await fetch(`${basePath}/api/questions/generate`, {
                     method: 'POST',
                     headers: {
@@ -247,12 +257,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     body: JSON.stringify({ answers: prompt })
                 });
 
+                if (!response.ok) {
+                    throw new Error('Failed to generate image');
+                }
+
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Clear the preview when successfully generating an image
+                    // Clear the preview
                     const previewContainer = document.getElementById('prompt-preview');
-                    previewContainer.classList.add('d-none');
+                    if (previewContainer) {
+                        previewContainer.classList.add('d-none');
+                    }
 
                     // Display the generated image
                     if (result.imageUrl) {
@@ -264,18 +280,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         const imageContainer = document.createElement('div');
                         imageContainer.className = 'generated-image card mt-4';
                         imageContainer.innerHTML = `
-                            <img src="${result.imageUrl}" class="card-img-top" alt="Generated Image">
+                            <img src="${basePath}${result.imageUrl}" class="card-img-top" alt="Generated Image">
                         `;
                         form.parentNode.appendChild(imageContainer);
                     }
                     
                     showToast('Image generated successfully!', 'success');
                 } else {
-                    showToast('Error: ' + (result.error || 'Failed to generate image'), 'danger');
+                    throw new Error(result.error || 'Failed to generate image');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('There was an error submitting your answers. Please try again.', 'danger');
+                showToast(error.message || 'There was an error submitting your answers. Please try again.', 'danger');
+            } finally {
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonContent;
             }
         });
     } catch (error) {
