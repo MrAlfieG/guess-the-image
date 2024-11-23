@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to load and display images
     async function loadImages() {
         try {
-            const response = await fetch('/api/images');
+            const response = await fetch('/christmas/api/images');
             const images = await response.json();
             
             // Clear existing images
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function deleteImage(image) {
         if (confirm('Are you sure you want to delete this image?')) {
             try {
-                const response = await fetch('/api/images/delete', {
+                const response = await fetch('/christmas/api/images/delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -102,12 +102,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to set an image as the current display
     async function setAsDisplay(image) {
         try {
-            const response = await fetch('/api/images/display', {
+            const response = await fetch('/christmas/api/images/display', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ imageUrl: image.url })
+                body: JSON.stringify({
+                    url: image.url,
+                    createdBy: image.createdBy || '',
+                    showCreatedBy: true
+                })
             });
             
             if (response.ok) {

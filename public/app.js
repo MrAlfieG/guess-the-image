@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     try {
         // Fetch questions from the server
-        const response = await fetch('/api/questions');
+        const response = await fetch('/christmas/api/questions');
         if (!response.ok) {
             throw new Error('Failed to fetch questions');
         }
@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const answers = {};
                 
                 // Get questions to check for excludeFromPrompt
-                const response = await fetch('/api/questions');
+                const response = await fetch('/christmas/api/questions');
                 const questions = await response.json();
                 
                 // Create a map of question IDs to their configurations
@@ -238,12 +238,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             try {
-                const response = await fetch('/submit', {
+                const response = await fetch('/christmas/api/questions/generate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(Object.fromEntries(new FormData(form)))
+                    body: JSON.stringify({ answers: prompt })
                 });
 
                 const result = await response.json();
