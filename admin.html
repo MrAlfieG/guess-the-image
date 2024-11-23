@@ -4,16 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Guess The Image Game</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="public/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/christmas/styles.css">
     <script>
         window.appConfig = {
             basePath: '/christmas'
         };
     </script>
-    <script src="public/admin.js" defer></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    <script src="/christmas/public/admin.js" defer></script>
     <style>
         .draggable-item { cursor: move; }
         .sortable-ghost { opacity: 0.4; }
@@ -30,10 +29,10 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Home</a>
+                        <a class="nav-link" href="/christmas/presenter" target="_blank">Presenter Mode</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/display.html" target="_blank">Display Page</a>
+                        <a class="nav-link" href="/christmas/display" target="_blank">Display Mode</a>
                     </li>
                 </ul>
             </div>
@@ -44,8 +43,8 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Admin Panel</h1>
             <div>
-                <a href="/presenter.html" class="btn btn-secondary me-2" target="_blank">Open Presenter Mode</a>
-                <a href="/display.html" class="btn btn-primary" target="_blank">Open Display</a>
+                <a href="/christmas/presenter" class="btn btn-secondary me-2" target="_blank">Open Presenter Mode</a>
+                <a href="/christmas/display" class="btn btn-primary" target="_blank">Open Display</a>
             </div>
         </div>
 
@@ -194,7 +193,7 @@
         // Load auto-display setting
         async function loadAutoDisplaySetting() {
             try {
-                const response = await fetch('/api/images/display/auto-display');
+                const response = await fetch('/christmas/api/images/display/auto-display');
                 if (!response.ok) throw new Error('Failed to load auto-display setting');
                 const data = await response.json();
                 document.getElementById('autoDisplayToggle').checked = data.autoDisplay;
@@ -207,7 +206,7 @@
         // Add event listener for auto-display toggle
         document.getElementById('autoDisplayToggle').addEventListener('change', async function(e) {
             try {
-                const response = await fetch('/api/images/display/toggle-auto-display', {
+                const response = await fetch('/christmas/api/images/display/toggle-auto-display', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -248,7 +247,7 @@
             }
 
             try {
-                const response = await fetch('/api/images/upload', {
+                const response = await fetch('/christmas/api/images/upload', {
                     method: 'POST',
                     body: formData
                 });
@@ -275,7 +274,7 @@
             const createdBy = document.getElementById('generatorCreatorName').value;
 
             try {
-                const response = await fetch('/api/images/generate', {
+                const response = await fetch('/christmas/api/images/generate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -318,7 +317,7 @@
         // Creator toggle
         document.getElementById('showCreatorToggle').addEventListener('change', async function(e) {
             try {
-                const response = await fetch('/api/images/display/toggle-creator', {
+                const response = await fetch('/christmas/api/images/display/toggle-creator', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -348,7 +347,7 @@
 
         async function loadCurrentDisplayImage() {
             try {
-                const response = await fetch('/api/images/display');
+                const response = await fetch('/christmas/api/images/display');
                 if (!response.ok) throw new Error('Failed to load current display image');
                 const data = await response.json();
                 currentDisplayImage = data;
@@ -365,7 +364,7 @@
 
         async function loadImages() {
             try {
-                const response = await fetch('/api/images');
+                const response = await fetch('/christmas/api/images');
                 if (!response.ok) throw new Error('Failed to load images');
                 images = await response.json();
                 // Filter out any null or invalid entries
@@ -392,7 +391,7 @@
 
         async function updateImageOrder(newOrder) {
             try {
-                const response = await fetch('/api/images/reorder', {
+                const response = await fetch('/christmas/api/images/reorder', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -499,7 +498,7 @@
                 const showCreatorToggle = document.getElementById('showCreatorToggle');
                 const showCreatedBy = showCreatorToggle ? showCreatorToggle.checked : false;
 
-                const response = await fetch('/api/images/display', {
+                const response = await fetch('/christmas/api/images/display', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -534,7 +533,7 @@
 
             try {
                 console.log('Attempting to delete image:', url);
-                const response = await fetch('/api/images/delete', {
+                const response = await fetch('/christmas/api/images/delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -578,7 +577,7 @@
             const newAnswer = input.value;
 
             try {
-                const response = await fetch('/api/images/update-answer', {
+                const response = await fetch('/christmas/api/images/update-answer', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

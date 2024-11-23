@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Presenter View</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+        window.appConfig = {
+            basePath: '/christmas'
+        };
+    </script>
     <style>
         body {
             background-color: #f8f9fa;
@@ -129,10 +134,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css"></script>
     <script>
-        let currentImageIndex = 0;
-        let totalImages = 0;
         let images = [];
-        let showAnswer = false;
+        let currentIndex = 0;
+        const basePath = window.appConfig?.basePath || '';
 
         // Load initial data
         document.addEventListener('DOMContentLoaded', async () => {
@@ -172,27 +176,27 @@
 
         async function loadImages() {
             try {
-                const response = await fetch('/api/images');
+                const response = await fetch(`${basePath}/api/images`);
                 if (!response.ok) throw new Error('Failed to load images');
                 images = await response.json();
                 // Filter out any null or invalid entries
                 images = images.filter(img => img && img.localPath);
-                totalImages = images.length;
+                currentIndex = images.length - 1;
                 
                 // Only try to find the current image index if we have a current display image
-                const displayResponse = await fetch('/api/images/display');
+                const displayResponse = await fetch(`${basePath}/api/images/display`);
                 if (displayResponse.ok) {
                     const displayImage = await displayResponse.json();
                     if (displayImage && displayImage.url) {
-                        currentImageIndex = images.findIndex(img => 
+                        currentIndex = images.findIndex(img => 
                             img && (img.localPath === displayImage.url || img.url === displayImage.url)
                         );
                     }
                 }
                 
-                // Ensure currentImageIndex is valid
-                if (currentImageIndex === -1 || currentImageIndex >= totalImages) {
-                    currentImageIndex = 0;
+                // Ensure currentIndex is valid
+                if (currentIndex === -1 || currentIndex >= images.length) {
+                    currentIndex = 0;
                 }
             } catch (error) {
                 console.error('Error loading images:', error);
@@ -204,13 +208,13 @@
             if (images.length === 0) return;
 
             // Update current slide
-            const currentImage = images[currentImageIndex];
+            const currentImage = images[currentIndex];
             document.getElementById('currentImage').src = currentImage.localPath || currentImage.url;
             document.getElementById('currentAnswer').textContent = currentImage.createdBy || 'No answer set';
 
             // Update display page
             try {
-                await fetch('/api/images/display', {
+                await fetch(`${basePath}/api/images/display`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -225,45 +229,36 @@
             }
 
             // Update next slide
-            const nextIndex = (currentImageIndex + 1) % totalImages;
+            const nextIndex = (currentIndex + 1) % images.length;
             const nextImage = images[nextIndex];
             document.getElementById('nextImage').src = nextImage.localPath || nextImage.url;
             document.getElementById('nextAnswer').textContent = nextImage.createdBy || 'No answer set';
-
-            // Update answer visibility
-            document.getElementById('currentSlide').classList.toggle('show-answer', showAnswer);
-            document.getElementById('nextSlide').classList.toggle('show-answer', showAnswer);
         }
 
         function nextImage() {
-            currentImageIndex = (currentImageIndex + 1) % totalImages;
+            currentIndex = (currentIndex + 1) % images.length;
             updateSlides();
         }
 
         function previousImage() {
-            currentImageIndex = (currentImageIndex - 1 + totalImages) % totalImages;
+            currentIndex = (currentIndex - 1 + images.length) % images.length;
             updateSlides();
         }
 
         async function toggleAnswer() {
-            showAnswer = !showAnswer;
-            document.getElementById('currentSlide').classList.toggle('show-answer', showAnswer);
-            document.getElementById('nextSlide').classList.toggle('show-answer', showAnswer);
+            const currentImage = images[currentIndex];
+            const showAnswer = !currentImage.showAnswer;
 
-            // Sync with display page
+            // Update display page
             try {
-                const response = await fetch('/api/images/display');
-                if (!response.ok) throw new Error('Failed to get current display data');
-                const currentDisplay = await response.json();
-
-                await fetch('/api/images/display', {
+                await fetch(`${basePath}/api/images/display`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        url: currentDisplay.url,
-                        createdBy: currentDisplay.createdBy,
+                        url: currentImage.localPath || currentImage.url,
+                        createdBy: currentImage.createdBy,
                         showCreatedBy: showAnswer
                     })
                 });
@@ -271,6 +266,10 @@
                 console.error('Error syncing answer visibility:', error);
                 showToast('Failed to sync answer visibility', 'danger');
             }
+
+            // Update local image data
+            currentImage.showAnswer = showAnswer;
+            updateSlides();
         }
 
         function showToast(message, type = 'success') {

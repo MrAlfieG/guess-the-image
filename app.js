@@ -14,8 +14,11 @@ const basePath = config.basePath || '';
 
 // Middleware
 app.use(bodyParser.json());
-app.use(basePath, express.static('.'));
-app.use(`${basePath}/stored-images`, express.static('stored-images'));
+
+// Serve static files
+app.use(basePath, express.static(path.join(__dirname, 'public')));
+app.use(basePath, express.static(__dirname));
+app.use(`${basePath}/stored-images`, express.static(path.join(__dirname, 'stored-images')));
 
 // Configure multer for multiple file uploads
 const upload = multer({
