@@ -3,377 +3,332 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Guess The Image Game</title>
+    <title>Admin Panel</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="/christmas/styles.css">
+    <link rel="stylesheet" href="/christmas/public/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .control-panel {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+        .current-display {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+        }
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+    </style>
     <script>
+        // Initialize with the known basePath
         window.appConfig = {
             basePath: '/christmas'
         };
-    </script>
-    <script src="/christmas/public/admin.js" defer></script>
-    <style>
-        .draggable-item { cursor: move; }
-        .sortable-ghost { opacity: 0.4; }
-        .card.active { border: 2px solid #0d6efd; }
-    </style>
-</head>
-<body class="bg-light">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">Admin Panel</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link" href="/christmas/presenter" target="_blank">Presenter Mode</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/christmas/display" target="_blank">Display Mode</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
 
-    <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Admin Panel</h1>
-            <div>
-                <a href="/christmas/presenter" class="btn btn-secondary me-2" target="_blank">Open Presenter Mode</a>
-                <a href="/christmas/display" class="btn btn-primary" target="_blank">Open Display</a>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h2 class="card-title mb-0">Image Management</h2>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showCreatorToggle" checked>
-                                <label class="form-check-label" for="showCreatorToggle">Show Answer</label>
-                            </div>
-                            <div class="form-check form-switch ms-3">
-                                <input class="form-check-input" type="checkbox" id="autoDisplayToggle" checked>
-                                <label class="form-check-label" for="autoDisplayToggle">Auto-display New Uploads</label>
-                            </div>
-                            <div class="form-check form-switch ms-3">
-                                <input class="form-check-input" type="checkbox" id="showDetailsToggle">
-                                <label class="form-check-label" for="showDetailsToggle">Show Details</label>
-                            </div>
-                        </div>
-
-                        <!-- Tab Navigation -->
-                        <ul class="nav nav-tabs mb-3" id="adminTabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#upload-content" type="button" role="tab">Upload Image</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="generate-tab" data-bs-toggle="tab" 
-                                        data-bs-target="#generate-content" type="button" role="tab">Generate Image</button>
-                            </li>
-                        </ul>
-
-                        <!-- Tab Content -->
-                        <div class="tab-content" id="adminTabsContent">
-                            <!-- Upload Tab -->
-                            <div class="tab-pane fade show active" id="upload-content" role="tabpanel">
-                                <div class="card-body">
-                                    <h5 class="card-title">Upload Images</h5>
-                                    <form id="uploadForm" class="mb-3">
-                                        <div class="mb-3">
-                                            <label for="imageFile" class="form-label">Select Images</label>
-                                            <input type="file" class="form-control" id="imageFile" name="imageFile" accept="image/*" multiple>
-                                        </div>
-                                        <button type="submit" class="btn btn-primary">Upload</button>
-                                    </form>
-                                </div>
-                            </div>
-
-                            <!-- Generate Tab -->
-                            <div class="tab-pane fade" id="generate-content" role="tabpanel">
-                                <form id="generateForm" class="mb-4">
-                                    <div class="mb-3">
-                                        <label for="promptInput" class="form-label">Image Description:</label>
-                                        <textarea class="form-control" id="promptInput" rows="3" 
-                                                placeholder="Describe the image you want to generate..." required></textarea>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="generatorCreatorName" class="form-label">Answer:</label>
-                                        <input type="text" class="form-control" id="generatorCreatorName" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Generate Image</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- Image Grid -->
-                        <div class="card shadow-sm mb-4">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h5 class="card-title mb-0">Uploaded Images</h5>
-                                    <span id="imageCounter" class="badge bg-secondary"></span>
-                                </div>
-                                <div id="imageGrid" class="row g-3">
-                                    <!-- Images will be inserted here -->
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Navigation Controls -->
-                        <div class="d-flex justify-content-between align-items-center mt-4">
-                            <button id="prevImage" class="btn btn-secondary">
-                                <i class="bi bi-chevron-left"></i> Previous
-                            </button>
-                            <p id="imageCounter" class="mb-0"></p>
-                            <button id="nextImage" class="btn btn-secondary">
-                                Next <i class="bi bi-chevron-right"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script>
         let currentDisplayImage = null;
         let currentImageIndex = 0;
         let totalImages = 0;
         let images = [];
+        let sortableInstance = null;
+        let autoRefreshInterval = null;
 
-        // Initialize Sortable
-        const imageGrid = document.getElementById('imageGrid');
-        new Sortable(imageGrid, {
-            animation: 150,
-            onEnd: async function(evt) {
-                try {
-                    const newOrder = Array.from(imageGrid.children)
-                        .map(el => {
-                            const url = el.dataset.url;
-                            return images.find(i => i && (i.localPath === url || i.url === url));
-                        })
-                        .filter(img => img !== null && img !== undefined);
+        // Initialize when the page loads
+        document.addEventListener('DOMContentLoaded', initializeConfig);
 
-                    if (newOrder.length !== images.length) {
-                        console.error('New order length does not match images length:', newOrder.length, images.length);
-                        showToast('Error updating image order', 'danger');
-                        return;
-                    }
-
-                    images = newOrder;
-                    await updateImageOrder(newOrder);
-                    updateImageCounter();
-                } catch (error) {
-                    console.error('Error in sort handler:', error);
-                    showToast('Failed to update image order', 'danger');
-                }
-            }
-        });
-
-        // Load initial data
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadCurrentDisplayImage();
-            await loadImages();
-            await loadAutoDisplaySetting();
-        });
-
-        // Load auto-display setting
-        async function loadAutoDisplaySetting() {
+        async function initializeConfig() {
             try {
-                const response = await fetch('/christmas/api/images/display/auto-display');
-                if (!response.ok) throw new Error('Failed to load auto-display setting');
-                const data = await response.json();
-                document.getElementById('autoDisplayToggle').checked = data.autoDisplay;
+                console.log('Loading images...');
+                await loadCurrentDisplayImage();
+                await loadImages();
+                await loadAdminSettings();
+                initializeSortable();
+                updateControlPanel();
+                startAutoRefresh();
             } catch (error) {
-                console.error('Error loading auto-display setting:', error);
-                showToast('Failed to load auto-display setting', 'danger');
+                console.error('Error in initialization:', error);
+                showToast('Error initializing: ' + error.message, 'danger');
             }
         }
 
-        // Add event listener for auto-display toggle
-        document.getElementById('autoDisplayToggle').addEventListener('change', async function(e) {
+        async function updateDisplaySettings(settings) {
             try {
-                const response = await fetch('/christmas/api/images/display/toggle-auto-display', {
+                const response = await fetch(`${window.appConfig.basePath}/api/images/display/settings`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ autoDisplay: e.target.checked })
+                    body: JSON.stringify(settings)
                 });
-
-                if (!response.ok) throw new Error('Failed to update auto-display setting');
+                
+                if (!response.ok) throw new Error('Failed to update display settings');
                 
                 const data = await response.json();
-                if (data.success) {
-                    showToast(data.message);
-                } else {
-                    throw new Error(data.error || 'Failed to update auto-display setting');
+                showToast(data.message || 'Settings updated successfully');
+                await loadCurrentDisplayImage();
+                updateControlPanel();
+                // Refresh the image grid when showDetails changes
+                if ('showDetails' in settings) {
+                    updateImageGrid();
                 }
             } catch (error) {
-                console.error('Error updating auto-display setting:', error);
-                showToast('Failed to update auto-display setting', 'danger');
-                // Revert the toggle if the update failed
-                e.target.checked = !e.target.checked;
+                console.error('Error updating settings:', error);
+                showToast('Failed to update settings: ' + error.message, 'danger');
             }
-        });
+        }
 
-        // Form submissions
-        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const fileInput = document.getElementById('imageFile');
-            const files = fileInput.files;
+        async function loadAdminSettings() {
+            try {
+                const response = await fetch(`${window.appConfig.basePath}/api/admin/settings`);
+                if (!response.ok) throw new Error('Failed to load admin settings');
+                const settings = await response.json();
+                document.getElementById('autoDisplayToggle').checked = settings.autoDisplayNew;
+            } catch (error) {
+                console.error('Error loading admin settings:', error);
+                showToast('Failed to load admin settings', 'danger');
+            }
+        }
+
+        async function updateAdminSettings(settings) {
+            try {
+                const response = await fetch(`${window.appConfig.basePath}/api/admin/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (!response.ok) throw new Error('Failed to update admin settings');
+                
+                const data = await response.json();
+                showToast(data.message || 'Settings updated successfully');
+            } catch (error) {
+                console.error('Error updating admin settings:', error);
+                showToast('Failed to update settings: ' + error.message, 'danger');
+            }
+        }
+
+        function updateControlPanel() {
+            const currentImg = document.getElementById('currentDisplayImage');
+            const showAnswerToggle = document.getElementById('showAnswerToggle');
+            const showDetailsToggle = document.getElementById('showDetailsToggle');
             
-            if (files.length === 0) {
-                showToast('Please select at least one image', 'warning');
-                return;
-            }
-
-            const formData = new FormData();
-            for (let i = 0; i < files.length; i++) {
-                formData.append('imageFile', files[i]);
-            }
-
-            try {
-                const response = await fetch('/christmas/api/images/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) throw new Error('Failed to upload images');
+            if (currentDisplayImage) {
+                currentImg.src = currentDisplayImage.url;
+                showAnswerToggle.checked = currentDisplayImage.showCreatedBy || false;
+                showDetailsToggle.checked = currentDisplayImage.showDetails || false;
                 
+                // Update image counter
+                if (images.length > 0) {
+                    const currentIndex = images.findIndex(img => 
+                        img.url === currentDisplayImage.url || img.localPath === currentDisplayImage.url
+                    );
+                    if (currentIndex !== -1) {
+                        currentImageIndex = currentIndex;
+                        updateImageCounter();
+                    }
+                }
+            }
+        }
+
+        async function navigateDisplay(direction) {
+            if (!images.length) return;
+            
+            const currentUrl = currentDisplayImage?.url;
+            let newIndex = 0;
+            
+            if (currentUrl) {
+                const currentIndex = images.findIndex(img => 
+                    img.url === currentUrl || img.localPath === currentUrl
+                );
+                if (currentIndex !== -1) {
+                    if (direction === 'next') {
+                        newIndex = (currentIndex + 1) % images.length;
+                    } else {
+                        newIndex = (currentIndex - 1 + images.length) % images.length;
+                    }
+                }
+            }
+            
+            const newImage = images[newIndex];
+            if (newImage) {
+                try {
+                    const imageUrl = newImage.url || newImage.localPath;
+                    await setDisplayImage(imageUrl, newImage.createdBy);
+                    currentImageIndex = newIndex;
+                    updateImageCounter();
+                    updateControlPanel();
+                } catch (error) {
+                    console.error('Error navigating to image:', error);
+                    showToast('Failed to navigate to image: ' + error.message, 'danger');
+                }
+            }
+        }
+
+        async function loadCurrentDisplayImage() {
+            try {
+                console.log('Loading current display image...');
+                const response = await fetch(`${window.appConfig.basePath}/api/images/display`);
+                if (!response.ok) throw new Error('Failed to load current display image');
                 const data = await response.json();
-                if (data.success) {
-                    showToast(`Successfully uploaded ${files.length} image${files.length > 1 ? 's' : ''}`);
-                    fileInput.value = ''; // Clear the file input
-                    await loadImages(); // Refresh the image list
-                } else {
-                    throw new Error(data.error || 'Failed to upload images');
+                console.log('Current display image:', data);
+                currentDisplayImage = data;
+                
+                // Find and set the current image index
+                if (data.url && images.length > 0) {
+                    const index = images.findIndex(img => 
+                        img.url === data.url || img.localPath === data.url
+                    );
+                    if (index !== -1) {
+                        currentImageIndex = index;
+                        updateImageCounter();
+                    }
                 }
             } catch (error) {
-                console.error('Error uploading images:', error);
-                showToast('Failed to upload images', 'danger');
+                console.error('Error loading current display image:', error);
+                showToast('Error loading current display: ' + error.message, 'danger');
             }
-        });
+        }
 
-        document.getElementById('generateForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const prompt = document.getElementById('promptInput').value;
-            const createdBy = document.getElementById('generatorCreatorName').value;
-
+        async function setDisplayImage(url, createdBy) {
             try {
-                const response = await fetch('/christmas/api/images/generate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ prompt, createdBy })
-                });
-
-                if (!response.ok) throw new Error('Generation failed');
-
-                showToast('Image generated successfully');
-                await loadImages();
-                document.getElementById('generateForm').reset();
-            } catch (error) {
-                console.error('Error generating:', error);
-                showToast('Failed to generate image', 'danger');
-            }
-        });
-
-        // Navigation
-        document.getElementById('prevImage').addEventListener('click', () => {
-            if (currentImageIndex > 0) {
-                currentImageIndex--;
-                const prevImage = images[currentImageIndex];
-                setDisplayImage(prevImage.localPath || prevImage.url, prevImage.createdBy);
-                updateImageGrid();
-                updateImageCounter();
-            }
-        });
-
-        document.getElementById('nextImage').addEventListener('click', () => {
-            if (currentImageIndex < totalImages - 1) {
-                currentImageIndex++;
-                const nextImage = images[currentImageIndex];
-                setDisplayImage(nextImage.localPath || nextImage.url, nextImage.createdBy);
-                updateImageGrid();
-                updateImageCounter();
-            }
-        });
-
-        // Creator toggle
-        document.getElementById('showCreatorToggle').addEventListener('change', async function(e) {
-            try {
-                const response = await fetch('/christmas/api/images/display/toggle-creator', {
+                const response = await fetch(`${window.appConfig.basePath}/api/images/display`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        showCreatedBy: e.target.checked
+                        url,
+                        createdBy,
+                        // Preserve current settings
+                        showCreatedBy: currentDisplayImage?.showCreatedBy || false,
+                        showDetails: currentDisplayImage?.showDetails || false
                     })
                 });
 
-                if (!response.ok) throw new Error('Failed to update creator visibility');
-                
-                const data = await response.json();
-                if (data.success) {
-                    showToast('Answer visibility updated');
-                    // Update the current display image
-                    currentDisplayImage = data.displayImage;
-                } else {
-                    throw new Error(data.error || 'Failed to update creator visibility');
+                if (!response.ok) {
+                    throw new Error('Failed to update display image');
                 }
-            } catch (error) {
-                console.error('Error updating creator visibility:', error);
-                showToast('Failed to update answer visibility', 'danger');
-                // Revert the toggle if the update failed
-                e.target.checked = !e.target.checked;
-            }
-        });
 
-        async function loadCurrentDisplayImage() {
-            try {
-                const response = await fetch('/christmas/api/images/display');
-                if (!response.ok) throw new Error('Failed to load current display image');
-                const data = await response.json();
-                currentDisplayImage = data;
-                
-                // Update the toggle to match the current state
-                const showCreatorToggle = document.getElementById('showCreatorToggle');
-                if (showCreatorToggle) {
-                    showCreatorToggle.checked = data.showCreatedBy;
-                }
+                await loadCurrentDisplayImage();
+                updateControlPanel();
+                showToast('Display image updated');
             } catch (error) {
-                console.error('Error loading current display image:', error);
+                console.error('Error setting display image:', error);
+                showToast('Failed to set display image', 'danger');
             }
+        }
+
+        function updateImageGrid() {
+            const grid = document.getElementById('imageGrid');
+            if (!grid) {
+                console.error('Image grid element not found');
+                return;
+            }
+
+            grid.innerHTML = '';
+            console.log('Updating grid with images:', images);
+
+            const showDetails = currentDisplayImage?.showDetails || false;
+
+            images.forEach((image, index) => {
+                const col = document.createElement('div');
+                col.className = 'col mb-4';
+                col.dataset.url = image.localPath || image.url;
+
+                const imageUrl = image.localPath || image.url;
+                console.log('Processing image:', imageUrl);
+
+                let detailsHtml = '';
+                if (showDetails) {
+                    detailsHtml = `
+                        <div class="details-section mt-2 small">
+                            <div class="accordion" id="detailsAccordion${index}">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed py-2" type="button" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#detailsCollapse${index}">
+                                            Image Details
+                                        </button>
+                                    </h2>
+                                    <div id="detailsCollapse${index}" class="accordion-collapse collapse" 
+                                         data-bs-parent="#detailsAccordion${index}">
+                                        <div class="accordion-body">
+                                            <p><strong>Created By:</strong> ${image.createdBy || 'N/A'}</p>
+                                            <p><strong>Timestamp:</strong> ${new Date(image.timestamp).toLocaleString()}</p>
+                                            <p><strong>Poster Type:</strong> ${image.posterType || 'N/A'}</p>
+                                            <p><strong>Style:</strong> ${image.style || 'N/A'}</p>
+                                            <p><strong>Art Style:</strong> ${image.artStyle || 'N/A'}</p>
+                                            <p><strong>Animal:</strong> ${image.animal || 'N/A'}</p>
+                                            <p><strong>Action:</strong> ${image.action || 'N/A'}</p>
+                                            <p><strong>Holding:</strong> ${image.holding || 'N/A'}</p>
+                                            <p><strong>Weather:</strong> ${image.weather || 'N/A'}</p>
+                                            <p><strong>Location:</strong> ${image.location || 'N/A'}</p>
+                                            <p><strong>Food:</strong> ${image.food || 'N/A'}</p>
+                                            <p><strong>Christmas Item:</strong> ${image.christmasItem || 'N/A'}</p>
+                                            <p><strong>Full Prompt:</strong> ${image.prompt || 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                col.innerHTML = `
+                    <div class="card h-100">
+                        <img src="${imageUrl}" class="card-img-top" alt="Generated Image" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" placeholder="Enter answer" value="${image.createdBy || ''}" 
+                                    data-image-url="${imageUrl}" onchange="updateAnswer(this)">
+                                <button class="btn btn-outline-primary" onclick="saveAnswer(this)">Save</button>
+                            </div>
+                            <div class="btn-group w-100">
+                                <button class="btn btn-outline-primary" onclick="setDisplayImage('${imageUrl}', '${image.createdBy || ''}')">
+                                    Set as Display
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteImage('${imageUrl}')">
+                                    Delete
+                                </button>
+                            </div>
+                            ${detailsHtml}
+                        </div>
+                    </div>
+                `;
+
+                grid.appendChild(col);
+            });
         }
 
         async function loadImages() {
             try {
-                const response = await fetch('/christmas/api/images');
+                console.log('Loading images list...');
+                const response = await fetch(`${window.appConfig.basePath}/api/images`);
                 if (!response.ok) throw new Error('Failed to load images');
                 images = await response.json();
+                console.log('Loaded images:', images);
+                
                 // Filter out any null or invalid entries
-                images = images.filter(img => img && img.localPath);
+                images = images.filter(img => img && (img.localPath || img.url));
                 totalImages = images.length;
                 
                 // Only try to find the current image index if we have a current display image
                 if (currentDisplayImage && currentDisplayImage.url) {
-                    currentImageIndex = images.findIndex(img => img && img.localPath === currentDisplayImage.url);
+                    currentImageIndex = images.findIndex(img => 
+                        img && (img.localPath === currentDisplayImage.url || img.url === currentDisplayImage.url)
+                    );
                 }
                 
                 // Ensure currentImageIndex is valid
@@ -385,146 +340,55 @@
                 updateImageCounter();
             } catch (error) {
                 console.error('Error loading images:', error);
-                showToast('Failed to load images', 'danger');
+                showToast('Failed to load images: ' + error.message, 'danger');
             }
         }
 
-        async function updateImageOrder(newOrder) {
-            try {
-                const response = await fetch('/christmas/api/images/reorder', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ images: newOrder })
-                });
-
-                if (!response.ok) {
-                    const data = await response.json();
-                    throw new Error(data.message || 'Failed to update image order');
-                }
-                
-                const data = await response.json();
-                if (data.success) {
-                    showToast(data.message || 'Image order updated');
-                } else {
-                    throw new Error(data.message || 'Failed to update image order');
-                }
-            } catch (error) {
-                console.error('Error updating image order:', error);
-                showToast(error.message || 'Failed to update image order', 'danger');
-                // Reload images to restore original order
-                await loadImages();
+        function initializeSortable() {
+            const imageGrid = document.getElementById('imageGrid');
+            if (!imageGrid) {
+                console.error('Image grid element not found');
+                return;
             }
-        }
 
-        function updateImageGrid() {
-            const grid = document.getElementById('imageGrid');
-            const showDetails = document.getElementById('showDetailsToggle').checked;
-            grid.innerHTML = '';
+            if (sortableInstance) {
+                sortableInstance.destroy();
+            }
 
-            images.forEach((image, index) => {
-                const col = document.createElement('div');
-                col.className = 'col-md-4 mb-4';
-                col.dataset.url = image.localPath || image.url;
+            sortableInstance = new Sortable(imageGrid, {
+                animation: 150,
+                onEnd: async function(evt) {
+                    try {
+                        const newOrder = Array.from(imageGrid.children)
+                            .map(el => {
+                                const url = el.dataset.url;
+                                return images.find(i => i && (i.localPath === url || i.url === url));
+                            })
+                            .filter(img => img !== null && img !== undefined);
 
-                let detailsHtml = '';
-                if (showDetails && image) {
-                    detailsHtml = `
-                        <div class="details-section mt-2 small">
-                            <div class="accordion" id="detailsAccordion${index}">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#detailsCollapse${index}">
-                                            Image Details
-                                        </button>
-                                    </h2>
-                                    <div id="detailsCollapse${index}" class="accordion-collapse collapse" data-bs-parent="#detailsAccordion${index}">
-                                        <div class="accordion-body">
-                                            <p><strong>Timestamp:</strong> ${new Date(image.timestamp).toLocaleString()}</p>
-                                            ${image.prompt ? `<p><strong>Prompt:</strong> ${image.prompt}</p>` : ''}
-                                            ${image.answers ? `
-                                                <p><strong>Answers:</strong></p>
-                                                <ul class="list-unstyled">
-                                                    ${Object.entries(image.answers).map(([key, value]) => `
-                                                        <li><small>${key}: ${value}</small></li>
-                                                    `).join('')}
-                                                </ul>
-                                            ` : ''}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                        if (newOrder.length !== images.length) {
+                            console.error('New order length does not match images length:', newOrder.length, images.length);
+                            showToast('Error updating image order', 'danger');
+                            return;
+                        }
+
+                        images = newOrder;
+                        await updateImageOrder(newOrder);
+                        updateImageCounter();
+                    } catch (error) {
+                        console.error('Error in sort handler:', error);
+                        showToast('Failed to update image order', 'danger');
+                    }
                 }
-
-                col.innerHTML = `
-                    <div class="card h-100">
-                        <img src="${image.localPath || image.url}" class="card-img-top" alt="Generated Image" style="height: 200px; object-fit: cover;">
-                        <div class="card-body">
-                            <div class="input-group mb-3">
-                                <input type="text" class="form-control" placeholder="Enter answer" value="${image.createdBy || ''}" 
-                                    data-image-url="${image.localPath || image.url}" onchange="updateAnswer(this)">
-                                <button class="btn btn-outline-primary" onclick="saveAnswer(this)">Save</button>
-                            </div>
-                            <div class="btn-group w-100">
-                                <button class="btn btn-primary" onclick="setDisplayImage('${image.localPath || image.url}', '${image.createdBy || ''}')">Display</button>
-                                <button class="btn btn-danger" onclick="deleteImage('${image.localPath || image.url}')">Delete</button>
-                            </div>
-                            ${detailsHtml}
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(col);
             });
         }
 
-        // Add event listener for show details toggle
-        document.getElementById('showDetailsToggle').addEventListener('change', function(e) {
-            updateImageGrid(); // Refresh the grid when toggle changes
-        });
-
         function updateImageCounter() {
             const counter = document.getElementById('imageCounter');
-            counter.textContent = totalImages > 0 
-                ? `Image ${currentImageIndex + 1} of ${totalImages}` 
-                : 'No images';
-        }
-
-        async function setDisplayImage(url, createdBy) {
-            try {
-                // Get the current state of the toggle
-                const showCreatorToggle = document.getElementById('showCreatorToggle');
-                const showCreatedBy = showCreatorToggle ? showCreatorToggle.checked : false;
-
-                const response = await fetch('/christmas/api/images/display', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        url: url,
-                        createdBy: createdBy || '',
-                        showCreatedBy: showCreatedBy  // Use the current toggle state
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to set display image');
-                }
-
-                const data = await response.json();
-                if (data.success) {
-                    showToast('Display image updated successfully');
-                    // Update the current display image
-                    currentDisplayImage = data.displayImage;
-                } else {
-                    throw new Error(data.error || 'Failed to set display image');
-                }
-            } catch (error) {
-                console.error('Error setting display image:', error);
-                showToast('Failed to set display image', 'danger');
+            if (counter && totalImages > 0) {
+                counter.textContent = `${currentImageIndex + 1} / ${totalImages}`;
+            } else if (counter) {
+                counter.textContent = '0 / 0';
             }
         }
 
@@ -533,7 +397,7 @@
 
             try {
                 console.log('Attempting to delete image:', url);
-                const response = await fetch('/christmas/api/images/delete', {
+                const response = await fetch(`${window.appConfig.basePath}/api/images/delete`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -572,28 +436,36 @@
         }
 
         async function saveAnswer(button) {
-            const input = button.parentElement.querySelector('input');
-            const url = input.dataset.imageUrl;
-            const newAnswer = input.value;
+            const input = button.previousElementSibling;
+            const imageUrl = input.dataset.imageUrl;
+            const answer = input.value;
 
             try {
-                const response = await fetch('/christmas/api/images/update-answer', {
+                const response = await fetch(`${window.appConfig.basePath}/api/images/update-answer`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        url: url,
-                        answer: newAnswer
+                        url: imageUrl,
+                        answer: answer
                     })
                 });
 
-                if (!response.ok) throw new Error('Failed to update answer');
-                
+                if (!response.ok) {
+                    throw new Error('Failed to update answer');
+                }
+
                 const data = await response.json();
                 if (data.success) {
                     showToast('Answer saved successfully');
-                    await loadImages(); // Refresh the image list
+                    // Update the image in our local array
+                    const imageIndex = images.findIndex(img => 
+                        img.url === imageUrl || img.localPath === imageUrl
+                    );
+                    if (imageIndex !== -1) {
+                        images[imageIndex].createdBy = answer;
+                    }
                 } else {
                     throw new Error(data.error || 'Failed to update answer');
                 }
@@ -602,6 +474,57 @@
                 showToast('Failed to save answer', 'danger');
             }
         }
+
+        async function updateImageOrder(newOrder) {
+            try {
+                const response = await fetch(`${window.appConfig.basePath}/api/images/reorder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ images: newOrder })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.message || 'Failed to update image order');
+                }
+                
+                const data = await response.json();
+                if (data.success) {
+                    showToast(data.message || 'Image order updated');
+                } else {
+                    throw new Error(data.message || 'Failed to update image order');
+                }
+            } catch (error) {
+                console.error('Error updating image order:', error);
+                showToast(error.message || 'Failed to update image order', 'danger');
+                // Reload images to restore original order
+                await loadImages();
+            }
+        }
+
+        function startAutoRefresh() {
+            // Check for new images every 5 seconds
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            autoRefreshInterval = setInterval(async () => {
+                const currentCount = images.length;
+                await loadImages();
+                if (images.length > currentCount) {
+                    showToast('New images have been added!');
+                    updateImageGrid();
+                }
+            }, 5000);
+        }
+
+        // Clean up interval when leaving the page
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
 
         function showToast(message, type = 'success') {
             const toastContainer = document.querySelector('.toast-container');
@@ -627,5 +550,49 @@
             });
         }
     </script>
+</head>
+<body>
+    <div class="container-fluid p-4">
+        <div class="control-panel">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <img id="currentDisplayImage" class="current-display" src="" alt="Current Display Image">
+                </div>
+                <div class="col-md-6">
+                    <div class="nav-controls">
+                        <button class="btn btn-primary" onclick="navigateDisplay('prev')">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button class="btn btn-primary" onclick="navigateDisplay('next')">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <div class="form-check form-switch ms-3">
+                            <input class="form-check-input" type="checkbox" id="showAnswerToggle" 
+                                onchange="updateDisplaySettings({showCreatedBy: this.checked})">
+                            <label class="form-check-label" for="showAnswerToggle">Show Answer</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showDetailsToggle"
+                                onchange="updateDisplaySettings({showDetails: this.checked})">
+                            <label class="form-check-label" for="showDetailsToggle">Show Details</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoDisplayToggle"
+                                onchange="updateAdminSettings({autoDisplayNew: this.checked})">
+                            <label class="form-check-label" for="autoDisplayToggle">Auto Display New</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 text-end">
+                    <span id="imageCounter" class="badge bg-secondary">0 / 0</span>
+                </div>
+            </div>
+        </div>
+        <div id="imageGrid" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
+        </div>
+    </div>
+
+    <!-- Toast Container for Notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 </body>
 </html>
