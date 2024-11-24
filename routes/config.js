@@ -264,6 +264,28 @@ router.get('/api/questions', async (req, res) => {
     }
 });
 
+// Function to get OpenAI API key
+async function getOpenAIKey() {
+    // First try environment variable
+    if (process.env.OPENAI_API_KEY) {
+        return process.env.OPENAI_API_KEY;
+    }
+
+    // If not in environment, try config.json
+    try {
+        const configPath = path.join(__dirname, '..', 'config.json');
+        const configData = await fs.readFile(configPath, 'utf8');
+        const config = JSON.parse(configData);
+        if (config.OPENAI_API_KEY) {
+            return config.OPENAI_API_KEY;
+        }
+    } catch (error) {
+        console.error('Error reading config.json:', error);
+    }
+
+    throw new Error('OpenAI API key not found in environment variables or config.json');
+}
+
 // Generate image from answers
 router.post('/api/questions/generate', async (req, res) => {
     try {
@@ -292,14 +314,12 @@ router.post('/api/questions/generate', async (req, res) => {
         }
 
         try {
-            // Initialize OpenAI client
-            if (!process.env.OPENAI_API_KEY) {
-                throw new Error('OpenAI API key is not configured');
-            }
+            // Get OpenAI API key
+            const apiKey = await getOpenAIKey();
 
             console.log('Initializing OpenAI...');
             const openai = new OpenAI({
-                apiKey: process.env.OPENAI_API_KEY
+                apiKey: apiKey
             });
 
             // If answers is a string, use it directly as the prompt
@@ -450,7 +470,6 @@ router.post('/api/images/delete', async (req, res) => {
     }
 });
 
-// Export the router and functions
 module.exports = {
     router,
     loadImagesData,
