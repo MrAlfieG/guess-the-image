@@ -4,10 +4,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const basePath = window.appConfig?.basePath || '';
     
     try {
+        console.log('Fetching questions from:', `${basePath}/api/questions`); // Debug log
         // Fetch questions from the server
         const response = await fetch(`${basePath}/api/questions`);
         if (!response.ok) {
-            throw new Error('Failed to fetch questions');
+            throw new Error(`Failed to fetch questions: ${response.status} ${response.statusText}`);
         }
         const questions = await response.json();
         console.log('Fetched questions:', questions); // Debug log
@@ -17,6 +18,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // Create form elements for each question
+        const questionsContainer = document.getElementById('questions-container');
+        questionsContainer.innerHTML = ''; // Clear any existing content
+
         questions.forEach(q => {
             const formGroup = document.createElement('div');
             formGroup.className = 'mb-4';
@@ -45,8 +49,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Handle options as an object
                 Object.entries(q.options).forEach(([key, value]) => {
                     const optEl = document.createElement('option');
-                    optEl.value = key;
-                    optEl.textContent = key;
+                    optEl.value = value;  // Use the value from options
+                    optEl.textContent = key;  // Use the key as display text
                     select.appendChild(optEl);
                 });
 
@@ -73,38 +77,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 formGroup.appendChild(invalidFeedback);
             }
 
-            form.appendChild(formGroup);
+            questionsContainer.appendChild(formGroup);
         });
 
         // Add required fields note
         const requiredNote = document.createElement('div');
         requiredNote.className = 'text-muted small mb-4';
         requiredNote.textContent = '* Required fields';
-        form.appendChild(requiredNote);
-
-        // Create button container
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'd-flex gap-2 mb-3';
-
-        // Add test prompt button
-        const testButton = document.createElement('button');
-        testButton.type = 'button';
-        testButton.textContent = 'Test Prompt';
-        testButton.className = 'btn btn-secondary';
-        testButton.onclick = () => generatePrompt(true);
-        buttonContainer.appendChild(testButton);
-
-        // Add generate image button
-        const submitButton = document.createElement('button');
-        submitButton.type = 'submit';
-        submitButton.className = 'btn btn-primary';
-        submitButton.innerHTML = `
-            Generate Image
-            <i class="bi bi-arrow-right ms-2"></i>
-        `;
-        buttonContainer.appendChild(submitButton);
-
-        form.appendChild(buttonContainer);
+        form.insertBefore(requiredNote, form.querySelector('button[type="submit"]'));
 
         // Create prompt preview container
         const previewContainer = document.createElement('div');
@@ -238,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             submitButton.disabled = true;
             submitButton.innerHTML = `
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                Generating Image...
+                Processing Request...
             `;
 
             try {
@@ -299,14 +279,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     } catch (error) {
-        console.error('Error loading questions:', error);
-        const errorMessage = document.createElement('div');
-        errorMessage.className = 'alert alert-danger';
-        errorMessage.innerHTML = `
-            <h5>Error Loading Questions</h5>
-            <p>${error.message}</p>
-            <p>Please try refreshing the page. If the problem persists, contact support.</p>
-        `;
-        form.parentNode.appendChild(errorMessage);
+        console.error('Error:', error);
+        const container = document.getElementById('questions-container');
+        container.innerHTML = `<div class="alert alert-danger">Error loading questions: ${error.message}</div>`;
     }
 });

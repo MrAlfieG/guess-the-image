@@ -1,134 +1,201 @@
-// Admin functionalities will be implemented here
+// State management
+const state = {
+    images: [],
+    modifiedAnswers: new Map(),
+    sortable: null
+};
 
-document.addEventListener('DOMContentLoaded', async () => {
-    const imageGrid = document.querySelector('.image-grid');
-    const basePath = window.appConfig?.basePath || '';
-    
-    // Function to load and display images
-    async function loadImages() {
-        try {
-            const response = await fetch(`${basePath}/api/images`);
-            const images = await response.json();
-            
-            // Clear existing images
-            imageGrid.innerHTML = '';
-            
-            // Sort images by timestamp, newest first
-            images.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            
-            images.forEach(image => {
-                const imageCard = document.createElement('div');
-                imageCard.className = 'image-card';
-                
-                // Create image element
-                const img = document.createElement('img');
-                img.src = image.url;
-                img.alt = 'Generated Image';
-                
-                // Create info section
-                const info = document.createElement('div');
-                info.className = 'image-info';
-                
-                // Format timestamp
-                const date = new Date(image.timestamp);
-                const formattedDate = date.toLocaleString();
-                
-                info.innerHTML = `
-                    <p><strong>Generated:</strong> ${formattedDate}</p>
-                    <p><strong>Prompt:</strong> ${image.prompt}</p>
-                    <div class="answers">
-                        <strong>Answers:</strong>
-                        <ul>
-                            ${Object.entries(image.answers)
-                                .map(([key, value]) => `<li>${key}: ${Array.isArray(value) ? value.join(', ') : value}</li>`)
-                                .join('')}
-                        </ul>
-                    </div>
-                `;
-                
-                // Create controls
-                const controls = document.createElement('div');
-                controls.className = 'image-controls';
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn btn-danger';
-                deleteBtn.textContent = 'Delete';
-                deleteBtn.onclick = () => deleteImage(image);
-                
-                const displayBtn = document.createElement('button');
-                displayBtn.className = 'btn btn-primary';
-                displayBtn.textContent = 'Set as Display';
-                displayBtn.onclick = () => setAsDisplay(image);
-                
-                controls.appendChild(displayBtn);
-                controls.appendChild(deleteBtn);
-                
-                // Assemble the card
-                imageCard.appendChild(img);
-                imageCard.appendChild(info);
-                imageCard.appendChild(controls);
-                
-                imageGrid.appendChild(imageCard);
-            });
-        } catch (error) {
-            console.error('Error loading images:', error);
-            alert('Error loading images. Please try again.');
-        }
-    }
-    
-    // Function to delete an image
-    async function deleteImage(image) {
-        if (confirm('Are you sure you want to delete this image?')) {
-            try {
-                const response = await fetch(`${basePath}/api/images/delete`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ imageUrl: image.url })
-                });
-                
-                if (response.ok) {
-                    await loadImages(); // Reload the images
-                } else {
-                    alert('Error deleting image. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error deleting image:', error);
-                alert('Error deleting image. Please try again.');
-            }
-        }
-    }
-    
-    // Function to set an image as the current display
-    async function setAsDisplay(image) {
-        try {
-            const response = await fetch(`${basePath}/api/images/display`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    url: image.url,
-                    createdBy: image.createdBy || '',
-                    showCreatedBy: true
-                })
-            });
-            
-            if (response.ok) {
-                alert('Image set as current display.');
-            } else {
-                alert('Error setting display image. Please try again.');
-            }
-        } catch (error) {
-            console.error('Error setting display image:', error);
-            alert('Error setting display image. Please try again.');
-        }
-    }
-    
-    // Load images initially
-    await loadImages();
-    
-    // Refresh images periodically
-    setInterval(loadImages, 30000); // Refresh every 30 seconds
+document.addEventListener('DOMContentLoaded', () => {
+    initializePage();
 });
+
+async function initializePage() {
+    await loadImages();
+    initializeSortable();
+    initializeSaveButton();
+}
+
+async function loadImages() {
+    try {
+        const response = await fetch('/christmas/api/images');
+        if (!response.ok) throw new Error('Failed to load images');
+        
+        state.images = await response.json();
+        renderImageGrid();
+    } catch (error) {
+        console.error('Error loading images:', error);
+        showToast('Failed to load images', 'danger');
+    }
+}
+
+function initializeSortable() {
+    const grid = document.getElementById('imageGrid');
+    state.sortable = new Sortable(grid, {
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onStart: (evt) => {
+            evt.item.classList.add('dragging');
+        },
+        onEnd: (evt) => {
+            evt.item.classList.remove('dragging');
+            handleReorder(evt.oldIndex, evt.newIndex);
+        }
+    });
+}
+
+function initializeSaveButton() {
+    const saveButton = document.getElementById('saveChanges');
+    saveButton.addEventListener('click', saveChanges);
+}
+
+function renderImageGrid() {
+    const grid = document.getElementById('imageGrid');
+    grid.innerHTML = '';
+    
+    state.images.forEach((image, index) => {
+        const card = document.createElement('div');
+        card.className = 'image-card';
+        card.dataset.id = image.id;
+        card.dataset.index = index;
+        
+        card.innerHTML = `
+            <button class="delete-btn" onclick="deleteImage('${image.id}')">
+                <i class="bi bi-x"></i>
+            </button>
+            <div class="image-wrapper">
+                <img src="${image.url}" alt="Image ${index + 1}" loading="lazy">
+            </div>
+            <input type="text" 
+                   class="answer-input" 
+                   value="${image.createdBy || ''}" 
+                   placeholder="Enter answer..."
+                   onchange="handleAnswerChange('${image.id}', this.value)"
+                   data-original="${image.createdBy || ''}">
+        `;
+        
+        grid.appendChild(card);
+    });
+}
+
+function handleAnswerChange(imageId, newValue) {
+    const card = document.querySelector(`[data-id="${imageId}"]`);
+    const input = card.querySelector('.answer-input');
+    const originalValue = input.dataset.original;
+    
+    if (newValue !== originalValue) {
+        state.modifiedAnswers.set(imageId, newValue);
+        card.classList.add('modified');
+    } else {
+        state.modifiedAnswers.delete(imageId);
+        card.classList.remove('modified');
+    }
+    
+    updateSaveButton();
+}
+
+function updateSaveButton() {
+    const saveButton = document.getElementById('saveChanges');
+    saveButton.disabled = state.modifiedAnswers.size === 0;
+}
+
+function handleReorder(oldIndex, newIndex) {
+    if (oldIndex === newIndex) return;
+    
+    // Update the local array
+    const [movedImage] = state.images.splice(oldIndex, 1);
+    state.images.splice(newIndex, 0, movedImage);
+    
+    // Send the new order to the server
+    const imageIds = state.images.map(img => img.id);
+    updateImageOrder(imageIds);
+}
+
+async function updateImageOrder(imageIds) {
+    try {
+        const response = await fetch('/christmas/api/images/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageIds })
+        });
+
+        if (!response.ok) throw new Error('Failed to update image order');
+        showToast('Image order updated');
+    } catch (error) {
+        console.error('Error updating image order:', error);
+        showToast('Failed to update image order', 'danger');
+        await loadImages(); // Reload to restore original order
+    }
+}
+
+async function deleteImage(imageId) {
+    if (!confirm('Are you sure you want to delete this image?')) return;
+    
+    try {
+        const response = await fetch(`/christmas/api/images/${imageId}`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete image');
+        
+        showToast('Image deleted');
+        await loadImages();
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        showToast('Failed to delete image', 'danger');
+    }
+}
+
+async function saveChanges() {
+    if (state.modifiedAnswers.size === 0) return;
+    
+    try {
+        const updates = Array.from(state.modifiedAnswers.entries()).map(([id, answer]) => ({
+            id,
+            createdBy: answer
+        }));
+        
+        const response = await fetch('/christmas/api/images/batch-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ updates })
+        });
+
+        if (!response.ok) throw new Error('Failed to save changes');
+        
+        showToast('Changes saved successfully');
+        state.modifiedAnswers.clear();
+        await loadImages();
+    } catch (error) {
+        console.error('Error saving changes:', error);
+        showToast('Failed to save changes', 'danger');
+    }
+}
+
+function showToast(message, type = 'success') {
+    const toastContainer = document.querySelector('.toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+// Make functions globally available for inline event handlers
+window.deleteImage = deleteImage;
+window.handleAnswerChange = handleAnswerChange;

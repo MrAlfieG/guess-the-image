@@ -108,49 +108,39 @@
     </div>
 
     <!-- Controls -->
-    <div class="controls">
-        <div class="container-fluid">
-            <div class="row align-items-center">
-                <div class="col">
-                    <div class="btn-group w-100">
-                        <button class="btn btn-outline-light" onclick="previousImage()">
-                            <i class="bi bi-chevron-left"></i> Previous
-                        </button>
-                        <button class="btn btn-outline-light" onclick="toggleAnswer()">
-                            Toggle Answer
-                        </button>
-                        <button class="btn btn-outline-light" onclick="nextImage()">
-                            Next <i class="bi bi-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
+    <div class="controls d-flex justify-content-center gap-3">
+        <button class="btn btn-outline-light" onclick="previousImage()">
+            <i class="bi bi-arrow-left"></i> Previous
+        </button>
+        <button class="btn btn-outline-light" onclick="toggleAnswer()">
+            <i class="bi bi-eye"></i> Show/Hide Answer
+        </button>
+        <button class="btn btn-outline-light" onclick="nextImage()">
+            Next <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- Toast container for notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toastTitle">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
+            <div class="toast-body" id="toastMessage"></div>
         </div>
     </div>
 
-    <!-- Toast Container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
     <script>
         let images = [];
         let currentIndex = 0;
-        const basePath = window.appConfig?.basePath || '';
-
-        // Load initial data
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadImages();
-            updateSlides();
-            
-            // Add swipe handlers
-            document.addEventListener('touchstart', handleTouchStart);
-            document.addEventListener('touchend', handleTouchEnd);
-        });
-
-        // Touch handling
         let touchStartX = 0;
         let touchEndX = 0;
+
+        // Load images on page load
+        document.addEventListener('DOMContentLoaded', loadImages);
 
         function handleTouchStart(event) {
             touchStartX = event.touches[0].clientX;
@@ -167,72 +157,63 @@
 
             if (Math.abs(swipeDistance) > swipeThreshold) {
                 if (swipeDistance > 0) {
-                    previousImage(); // Swipe right
+                    previousImage();
                 } else {
-                    nextImage(); // Swipe left
+                    nextImage();
                 }
             }
         }
 
         async function loadImages() {
             try {
+                const basePath = window.appConfig?.basePath || '';
                 const response = await fetch(`${basePath}/api/images`);
                 if (!response.ok) throw new Error('Failed to load images');
+                
                 images = await response.json();
-                // Filter out any null or invalid entries
-                images = images.filter(img => img && img.localPath);
-                currentIndex = images.length - 1;
-                
-                // Only try to find the current image index if we have a current display image
-                const displayResponse = await fetch(`${basePath}/api/images/display`);
-                if (displayResponse.ok) {
-                    const displayImage = await displayResponse.json();
-                    if (displayImage && displayImage.url) {
-                        currentIndex = images.findIndex(img => 
-                            img && (img.localPath === displayImage.url || img.url === displayImage.url)
-                        );
-                    }
+                if (!Array.isArray(images) || images.length === 0) {
+                    throw new Error('No images available');
                 }
+
+                // Sort images by timestamp, newest first
+                images.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
-                // Ensure currentIndex is valid
-                if (currentIndex === -1 || currentIndex >= images.length) {
-                    currentIndex = 0;
-                }
+                updateSlides();
+                showToast('Images loaded successfully', 'success');
             } catch (error) {
                 console.error('Error loading images:', error);
-                showToast('Failed to load images', 'danger');
+                showToast('Error loading images: ' + error.message, 'error');
             }
         }
 
-        async function updateSlides() {
+        function updateSlides() {
             if (images.length === 0) return;
 
-            // Update current slide
-            const currentImage = images[currentIndex];
-            document.getElementById('currentImage').src = currentImage.localPath || currentImage.url;
-            document.getElementById('currentAnswer').textContent = currentImage.createdBy || 'No answer set';
+            const currentImage = document.getElementById('currentImage');
+            const nextImage = document.getElementById('nextImage');
+            const currentAnswer = document.getElementById('currentAnswer');
+            const nextAnswer = document.getElementById('nextAnswer');
 
-            // Update display page
-            try {
-                await fetch(`${basePath}/api/images/display`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        url: currentImage.localPath || currentImage.url
-                    })
-                });
-            } catch (error) {
-                console.error('Error updating display:', error);
-                showToast('Failed to update display', 'danger');
-            }
+            // Update current slide
+            const current = images[currentIndex];
+            currentImage.src = current.url;
+            currentAnswer.innerHTML = `
+                <p><strong>Created by:</strong> ${current.createdBy || 'Anonymous'}</p>
+                <p><strong>Prompt:</strong> ${current.prompt || 'No prompt available'}</p>
+            `;
 
             // Update next slide
             const nextIndex = (currentIndex + 1) % images.length;
-            const nextImage = images[nextIndex];
-            document.getElementById('nextImage').src = nextImage.localPath || nextImage.url;
-            document.getElementById('nextAnswer').textContent = nextImage.createdBy || 'No answer set';
+            const next = images[nextIndex];
+            nextImage.src = next.url;
+            nextAnswer.innerHTML = `
+                <p><strong>Created by:</strong> ${next.createdBy || 'Anonymous'}</p>
+                <p><strong>Prompt:</strong> ${next.prompt || 'No prompt available'}</p>
+            `;
+
+            // Reset answer visibility
+            document.getElementById('currentSlide').classList.remove('show-answer');
+            document.getElementById('nextSlide').classList.remove('show-answer');
         }
 
         function nextImage() {
@@ -245,60 +226,36 @@
             updateSlides();
         }
 
-        async function toggleAnswer() {
-            const currentImage = images[currentIndex];
-            const showAnswer = !currentImage.showAnswer;
-
-            // Update display page
-            try {
-                await fetch(`${basePath}/api/images/display`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        url: currentImage.localPath || currentImage.url,
-                        createdBy: currentImage.createdBy,
-                        showCreatedBy: showAnswer
-                    })
-                });
-            } catch (error) {
-                console.error('Error syncing answer visibility:', error);
-                showToast('Failed to sync answer visibility', 'danger');
-            }
-
-            // Update local image data
-            currentImage.showAnswer = showAnswer;
-            updateSlides();
+        function toggleAnswer() {
+            const currentSlide = document.getElementById('currentSlide');
+            currentSlide.classList.toggle('show-answer');
         }
 
         function showToast(message, type = 'success') {
-            const toastContainer = document.querySelector('.toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-white bg-${type} border-0`;
-            toast.setAttribute('role', 'alert');
-            toast.setAttribute('aria-live', 'assertive');
-            toast.setAttribute('aria-atomic', 'true');
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastTitle = document.getElementById('toastTitle');
             
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            `;
+            // Remove existing classes
+            toast.classList.remove('bg-success', 'bg-danger', 'text-white');
             
-            toastContainer.appendChild(toast);
+            // Add appropriate styling
+            if (type === 'error') {
+                toast.classList.add('bg-danger', 'text-white');
+                toastTitle.textContent = 'Error';
+            } else {
+                toast.classList.add('bg-success', 'text-white');
+                toastTitle.textContent = 'Success';
+            }
+            
+            toastMessage.textContent = message;
+            
+            // Show toast
             const bsToast = new bootstrap.Toast(toast);
             bsToast.show();
-            
-            toast.addEventListener('hidden.bs.toast', () => {
-                toast.remove();
-            });
         }
 
-        // Keyboard shortcuts
+        // Add keyboard and touch event listeners
         document.addEventListener('keydown', (e) => {
             switch(e.key) {
                 case 'ArrowLeft':
@@ -313,6 +270,10 @@
                     break;
             }
         });
+
+        // Add touch events for mobile swipe
+        document.addEventListener('touchstart', handleTouchStart);
+        document.addEventListener('touchend', handleTouchEnd);
     </script>
 </body>
 </html>
