@@ -17,7 +17,6 @@ pids
 
 # Application specific
 config.json
-generated-images.json
 display-image.json
 stored-images/
 

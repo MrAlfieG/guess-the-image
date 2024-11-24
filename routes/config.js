@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const config = require('../config');
 const path = require('path');
 const fs = require('fs').promises;
 const OpenAI = require('openai');
@@ -19,6 +18,11 @@ async function loadImagesData() {
         const images = JSON.parse(data);
         return Array.isArray(images) ? images : [];
     } catch (error) {
+        if (error.code === 'ENOENT') {
+            // If file doesn't exist, create it with empty array
+            await fs.writeFile(path.join(__dirname, '..', 'generated-images.json'), '[]');
+            return [];
+        }
         console.error('Error loading images data:', error);
         return [];
     }
@@ -50,11 +54,11 @@ async function loadDisplayImage() {
 }
 
 // Save display image data
-async function saveDisplayImage(data) {
+async function saveDisplayImage(displayImage) {
     try {
         await fs.writeFile(
             path.join(__dirname, '..', 'display-image.json'),
-            JSON.stringify(data, null, 2)
+            JSON.stringify(displayImage, null, 2)
         );
         return true;
     } catch (error) {
@@ -69,6 +73,11 @@ async function loadAdminSettings() {
         const data = await fs.readFile(path.join(__dirname, '..', 'admin-settings.json'), 'utf8');
         return JSON.parse(data);
     } catch (error) {
+        if (error.code === 'ENOENT') {
+            const defaultSettings = { autoDisplayNew: false };
+            await saveAdminSettings(defaultSettings);
+            return defaultSettings;
+        }
         console.error('Error loading admin settings:', error);
         return { autoDisplayNew: false };
     }
@@ -95,6 +104,31 @@ async function loadQuestions() {
         return JSON.parse(data);
     } catch (error) {
         console.error('Error loading questions:', error);
+        return [];
+    }
+}
+
+// Save questions
+async function saveQuestions(questions) {
+    try {
+        await fs.writeFile(
+            path.join(__dirname, '..', 'questions.json'),
+            JSON.stringify(questions, null, 2)
+        );
+        return true;
+    } catch (error) {
+        console.error('Error saving questions:', error);
+        return false;
+    }
+}
+
+// Generate questions
+async function generateQuestions() {
+    try {
+        // TO DO: implement question generation logic
+        return [];
+    } catch (error) {
+        console.error('Error generating questions:', error);
         return [];
     }
 }
@@ -140,8 +174,8 @@ router.post('/api/images/update-answer', async (req, res) => {
 
 router.get('/api/images/display', async (req, res) => {
     try {
-        const data = await loadDisplayImage();
-        res.json(data);
+        const displayImage = await loadDisplayImage();
+        res.json(displayImage);
     } catch (error) {
         console.error('Error serving display image:', error);
         res.status(500).json({ error: 'Failed to load display image' });
@@ -400,4 +434,16 @@ router.post('/api/images/delete', async (req, res) => {
     }
 });
 
-module.exports = router;
+// Export the router and functions
+module.exports = {
+    router,
+    loadImagesData,
+    saveImagesData,
+    loadDisplayImage,
+    saveDisplayImage,
+    loadAdminSettings,
+    saveAdminSettings,
+    loadQuestions,
+    saveQuestions,
+    generateQuestions
+};

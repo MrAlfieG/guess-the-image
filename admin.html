@@ -28,7 +28,86 @@
             align-items: center;
             gap: 1rem;
         }
+        .upload-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+        .upload-section.drag-over {
+            border-color: #0d6efd;
+            background-color: #e9ecef;
+        }
+        .progress {
+            height: 0.5rem;
+            margin-top: 1rem;
+        }
     </style>
+</head>
+<body>
+    <div class="container-fluid p-4">
+        <div class="control-panel">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <div class="nav-controls">
+                        <button class="btn btn-outline-secondary" onclick="navigateDisplay('prev')">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <img id="currentDisplayImage" src="/christmas/public/image-not-found.svg" alt="Current Display" class="current-display">
+                        <button class="btn btn-outline-secondary" onclick="navigateDisplay('next')">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex gap-4 justify-content-center">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showAnswerToggle"
+                                onchange="updateDisplaySettings({showCreatedBy: this.checked})">
+                            <label class="form-check-label" for="showAnswerToggle">Show Answer</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showDetailsToggle"
+                                onchange="updateDisplaySettings({showDetails: this.checked})">
+                            <label class="form-check-label" for="showDetailsToggle">Show Details</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoDisplayToggle"
+                                onchange="updateAdminSettings({autoDisplayNew: this.checked})">
+                            <label class="form-check-label" for="autoDisplayToggle">Auto Display New</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 text-end">
+                    <span id="imageCounter" class="badge bg-secondary">0 / 0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-section" id="uploadSection">
+            <h5>Upload Images</h5>
+            <form id="uploadForm" class="mb-3">
+                <div class="mb-3">
+                    <label for="imageFiles" class="form-label">Choose Images</label>
+                    <input type="file" class="form-control" id="imageFiles" name="images" multiple accept="image/*">
+                    <small class="text-muted">Drag and drop files here or click to select</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Upload Images</button>
+            </form>
+            <div id="uploadProgress" class="progress d-none">
+                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Image Grid -->
+        <div class="row g-4" id="imageGrid"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
     <script>
         // Initialize with the known basePath
         window.appConfig = {
@@ -54,37 +133,83 @@
                 initializeSortable();
                 updateControlPanel();
                 startAutoRefresh();
+                setupDragAndDrop();
             } catch (error) {
                 console.error('Error in initialization:', error);
                 showToast('Error initializing: ' + error.message, 'danger');
             }
         }
 
-        async function updateDisplaySettings(settings) {
-            try {
-                const response = await fetch(`${window.appConfig.basePath}/api/images/display/settings`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(settings)
-                });
-                
-                if (!response.ok) throw new Error('Failed to update display settings');
-                
-                const data = await response.json();
-                showToast(data.message || 'Settings updated successfully');
-                await loadCurrentDisplayImage();
-                updateControlPanel();
-                // Refresh the image grid when showDetails changes
-                if ('showDetails' in settings) {
-                    updateImageGrid();
-                }
-            } catch (error) {
-                console.error('Error updating settings:', error);
-                showToast('Failed to update settings: ' + error.message, 'danger');
+        function setupDragAndDrop() {
+            const uploadSection = document.getElementById('uploadSection');
+            const fileInput = document.getElementById('imageFiles');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadSection.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
             }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadSection.addEventListener(eventName, () => {
+                    uploadSection.classList.add('drag-over');
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadSection.addEventListener(eventName, () => {
+                    uploadSection.classList.remove('drag-over');
+                });
+            });
+
+            uploadSection.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                fileInput.files = files;
+            });
         }
+
+        // File upload handling
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const files = document.getElementById('imageFiles').files;
+            if (files.length === 0) {
+                showToast('Please select files to upload', 'warning');
+                return;
+            }
+
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('images', file);
+            }
+
+            const progressBar = document.querySelector('#uploadProgress');
+            const progressBarInner = progressBar.querySelector('.progress-bar');
+            progressBar.classList.remove('d-none');
+            progressBarInner.style.width = '0%';
+
+            try {
+                const response = await fetch(`${window.appConfig.basePath}/api/upload-images`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                const result = await response.json();
+                showToast(result.message || 'Upload successful');
+                await loadImages(); // Refresh the image grid
+                document.getElementById('uploadForm').reset();
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('Upload failed: ' + error.message, 'danger');
+            } finally {
+                progressBar.classList.add('d-none');
+            }
+        });
 
         async function loadAdminSettings() {
             try {
@@ -115,6 +240,86 @@
             } catch (error) {
                 console.error('Error updating admin settings:', error);
                 showToast('Failed to update settings: ' + error.message, 'danger');
+            }
+        }
+
+        async function updateDisplaySettings(settings) {
+            try {
+                const response = await fetch(`${window.appConfig.basePath}/api/images/display/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+                
+                if (!response.ok) throw new Error('Failed to update display settings');
+                
+                const data = await response.json();
+                showToast(data.message || 'Settings updated successfully');
+                await loadCurrentDisplayImage();
+                updateControlPanel();
+                // Refresh the image grid when showDetails changes
+                if ('showDetails' in settings) {
+                    updateImageGrid();
+                }
+            } catch (error) {
+                console.error('Error updating settings:', error);
+                showToast('Failed to update settings: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadCurrentDisplayImage() {
+            try {
+                console.log('Loading current display image...');
+                const response = await fetch(`${window.appConfig.basePath}/api/images/display`);
+                if (!response.ok) throw new Error('Failed to load current display image');
+                const data = await response.json();
+                console.log('Current display image:', data);
+                currentDisplayImage = data;
+                
+                // Find and set the current image index
+                if (data.url && images.length > 0) {
+                    const index = images.findIndex(img => 
+                        img.url === data.url || img.localPath === data.url
+                    );
+                    if (index !== -1) {
+                        currentImageIndex = index;
+                        updateImageCounter();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading current display image:', error);
+                showToast('Error loading current display: ' + error.message, 'danger');
+            }
+        }
+
+        async function setDisplayImage(url, createdBy) {
+            try {
+                const response = await fetch(`${window.appConfig.basePath}/api/images/display`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url,
+                        createdBy,
+                        // Preserve current settings
+                        showCreatedBy: currentDisplayImage?.showCreatedBy || false,
+                        showDetails: currentDisplayImage?.showDetails || false
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update display image');
+                }
+
+                await loadCurrentDisplayImage();
+                updateControlPanel();
+                showToast('Display image updated');
+            } catch (error) {
+                console.error('Error setting display image:', error);
+                showToast('Failed to set display image', 'danger');
             }
         }
 
@@ -173,143 +378,6 @@
                     showToast('Failed to navigate to image: ' + error.message, 'danger');
                 }
             }
-        }
-
-        async function loadCurrentDisplayImage() {
-            try {
-                console.log('Loading current display image...');
-                const response = await fetch(`${window.appConfig.basePath}/api/images/display`);
-                if (!response.ok) throw new Error('Failed to load current display image');
-                const data = await response.json();
-                console.log('Current display image:', data);
-                currentDisplayImage = data;
-                
-                // Find and set the current image index
-                if (data.url && images.length > 0) {
-                    const index = images.findIndex(img => 
-                        img.url === data.url || img.localPath === data.url
-                    );
-                    if (index !== -1) {
-                        currentImageIndex = index;
-                        updateImageCounter();
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading current display image:', error);
-                showToast('Error loading current display: ' + error.message, 'danger');
-            }
-        }
-
-        async function setDisplayImage(url, createdBy) {
-            try {
-                const response = await fetch(`${window.appConfig.basePath}/api/images/display`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        url,
-                        createdBy,
-                        // Preserve current settings
-                        showCreatedBy: currentDisplayImage?.showCreatedBy || false,
-                        showDetails: currentDisplayImage?.showDetails || false
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to update display image');
-                }
-
-                await loadCurrentDisplayImage();
-                updateControlPanel();
-                showToast('Display image updated');
-            } catch (error) {
-                console.error('Error setting display image:', error);
-                showToast('Failed to set display image', 'danger');
-            }
-        }
-
-        function updateImageGrid() {
-            const grid = document.getElementById('imageGrid');
-            if (!grid) {
-                console.error('Image grid element not found');
-                return;
-            }
-
-            grid.innerHTML = '';
-            console.log('Updating grid with images:', images);
-
-            const showDetails = currentDisplayImage?.showDetails || false;
-
-            images.forEach((image, index) => {
-                const col = document.createElement('div');
-                col.className = 'col mb-4';
-                col.dataset.url = image.localPath || image.url;
-
-                const imageUrl = image.localPath || image.url;
-                console.log('Processing image:', imageUrl);
-
-                let detailsHtml = '';
-                if (showDetails) {
-                    detailsHtml = `
-                        <div class="details-section mt-2 small">
-                            <div class="accordion" id="detailsAccordion${index}">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed py-2" type="button" 
-                                                data-bs-toggle="collapse" 
-                                                data-bs-target="#detailsCollapse${index}">
-                                            Image Details
-                                        </button>
-                                    </h2>
-                                    <div id="detailsCollapse${index}" class="accordion-collapse collapse" 
-                                         data-bs-parent="#detailsAccordion${index}">
-                                        <div class="accordion-body">
-                                            <p><strong>Created By:</strong> ${image.createdBy || 'N/A'}</p>
-                                            <p><strong>Timestamp:</strong> ${new Date(image.timestamp).toLocaleString()}</p>
-                                            <p><strong>Poster Type:</strong> ${image.posterType || 'N/A'}</p>
-                                            <p><strong>Style:</strong> ${image.style || 'N/A'}</p>
-                                            <p><strong>Art Style:</strong> ${image.artStyle || 'N/A'}</p>
-                                            <p><strong>Animal:</strong> ${image.animal || 'N/A'}</p>
-                                            <p><strong>Action:</strong> ${image.action || 'N/A'}</p>
-                                            <p><strong>Holding:</strong> ${image.holding || 'N/A'}</p>
-                                            <p><strong>Weather:</strong> ${image.weather || 'N/A'}</p>
-                                            <p><strong>Location:</strong> ${image.location || 'N/A'}</p>
-                                            <p><strong>Food:</strong> ${image.food || 'N/A'}</p>
-                                            <p><strong>Christmas Item:</strong> ${image.christmasItem || 'N/A'}</p>
-                                            <p><strong>Full Prompt:</strong> ${image.prompt || 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                col.innerHTML = `
-                    <div class="card h-100">
-                        <img src="${imageUrl}" class="card-img-top" alt="Generated Image" style="height: 200px; object-fit: cover;">
-                        <div class="card-body">
-                            <div class="input-group mb-3">
-                                <input type="text" class="form-control" placeholder="Enter answer" value="${image.createdBy || ''}" 
-                                    data-image-url="${imageUrl}" onchange="updateAnswer(this)">
-                                <button class="btn btn-outline-primary" onclick="saveAnswer(this)">Save</button>
-                            </div>
-                            <div class="btn-group w-100">
-                                <button class="btn btn-outline-primary" onclick="setDisplayImage('${imageUrl}', '${image.createdBy || ''}')">
-                                    Set as Display
-                                </button>
-                                <button class="btn btn-outline-danger" onclick="deleteImage('${imageUrl}')">
-                                    Delete
-                                </button>
-                            </div>
-                            ${detailsHtml}
-                        </div>
-                    </div>
-                `;
-
-                grid.appendChild(col);
-            });
         }
 
         async function loadImages() {
@@ -504,6 +572,89 @@
             }
         }
 
+        function updateImageGrid() {
+            const grid = document.getElementById('imageGrid');
+            if (!grid) {
+                console.error('Image grid element not found');
+                return;
+            }
+
+            grid.innerHTML = '';
+            console.log('Updating grid with images:', images);
+
+            const showDetails = currentDisplayImage?.showDetails || false;
+
+            images.forEach((image, index) => {
+                const col = document.createElement('div');
+                col.className = 'col mb-4';
+                col.dataset.url = image.localPath || image.url;
+
+                const imageUrl = image.localPath || image.url;
+                console.log('Processing image:', imageUrl);
+
+                let detailsHtml = '';
+                if (showDetails) {
+                    detailsHtml = `
+                        <div class="details-section mt-2 small">
+                            <div class="accordion" id="detailsAccordion${index}">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed py-2" type="button" 
+                                                data-bs-toggle="collapse" 
+                                                data-bs-target="#detailsCollapse${index}">
+                                            Image Details
+                                        </button>
+                                    </h2>
+                                    <div id="detailsCollapse${index}" class="accordion-collapse collapse" 
+                                         data-bs-parent="#detailsAccordion${index}">
+                                        <div class="accordion-body">
+                                            <p><strong>Created By:</strong> ${image.createdBy || 'N/A'}</p>
+                                            <p><strong>Timestamp:</strong> ${new Date(image.timestamp).toLocaleString()}</p>
+                                            <p><strong>Poster Type:</strong> ${image.posterType || 'N/A'}</p>
+                                            <p><strong>Style:</strong> ${image.style || 'N/A'}</p>
+                                            <p><strong>Art Style:</strong> ${image.artStyle || 'N/A'}</p>
+                                            <p><strong>Animal:</strong> ${image.animal || 'N/A'}</p>
+                                            <p><strong>Action:</strong> ${image.action || 'N/A'}</p>
+                                            <p><strong>Holding:</strong> ${image.holding || 'N/A'}</p>
+                                            <p><strong>Weather:</strong> ${image.weather || 'N/A'}</p>
+                                            <p><strong>Location:</strong> ${image.location || 'N/A'}</p>
+                                            <p><strong>Food:</strong> ${image.food || 'N/A'}</p>
+                                            <p><strong>Christmas Item:</strong> ${image.christmasItem || 'N/A'}</p>
+                                            <p><strong>Full Prompt:</strong> ${image.prompt || 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                col.innerHTML = `
+                    <div class="card h-100">
+                        <img src="${imageUrl}" class="card-img-top" alt="Generated Image" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" placeholder="Enter answer" value="${image.createdBy || ''}" 
+                                    data-image-url="${imageUrl}" onchange="updateAnswer(this)">
+                                <button class="btn btn-outline-primary" onclick="saveAnswer(this)">Save</button>
+                            </div>
+                            <div class="btn-group w-100">
+                                <button class="btn btn-outline-primary" onclick="setDisplayImage('${imageUrl}', '${image.createdBy || ''}')">
+                                    Set as Display
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteImage('${imageUrl}')">
+                                    Delete
+                                </button>
+                            </div>
+                            ${detailsHtml}
+                        </div>
+                    </div>
+                `;
+
+                grid.appendChild(col);
+            });
+        }
+
         function startAutoRefresh() {
             // Check for new images every 5 seconds
             if (autoRefreshInterval) {
@@ -550,49 +701,5 @@
             });
         }
     </script>
-</head>
-<body>
-    <div class="container-fluid p-4">
-        <div class="control-panel">
-            <div class="row align-items-center">
-                <div class="col-md-3">
-                    <img id="currentDisplayImage" class="current-display" src="" alt="Current Display Image">
-                </div>
-                <div class="col-md-6">
-                    <div class="nav-controls">
-                        <button class="btn btn-primary" onclick="navigateDisplay('prev')">
-                            <i class="bi bi-chevron-left"></i>
-                        </button>
-                        <button class="btn btn-primary" onclick="navigateDisplay('next')">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-                        <div class="form-check form-switch ms-3">
-                            <input class="form-check-input" type="checkbox" id="showAnswerToggle" 
-                                onchange="updateDisplaySettings({showCreatedBy: this.checked})">
-                            <label class="form-check-label" for="showAnswerToggle">Show Answer</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="showDetailsToggle"
-                                onchange="updateDisplaySettings({showDetails: this.checked})">
-                            <label class="form-check-label" for="showDetailsToggle">Show Details</label>
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="autoDisplayToggle"
-                                onchange="updateAdminSettings({autoDisplayNew: this.checked})">
-                            <label class="form-check-label" for="autoDisplayToggle">Auto Display New</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 text-end">
-                    <span id="imageCounter" class="badge bg-secondary">0 / 0</span>
-                </div>
-            </div>
-        </div>
-        <div id="imageGrid" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4">
-        </div>
-    </div>
-
-    <!-- Toast Container for Notifications -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
 </body>
 </html>
