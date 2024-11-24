@@ -19,6 +19,9 @@ pids
 config.json
 display-image.json
 stored-images/
+generated-images/
+generated-images.json
+questions.json
 
 # IDE specific
 .idea/

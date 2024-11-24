@@ -55,7 +55,6 @@ const upload = multer({
 // Serve static files
 app.use(basePath + '/public', express.static(path.join(__dirname, 'public')));
 app.use(basePath + '/generated-images', express.static(path.join(__dirname, 'generated-images')));
-app.use(basePath + '/stored-images', express.static(path.join(__dirname, 'stored-images')));
 
 // Body parser middleware
 app.use(bodyParser.json());

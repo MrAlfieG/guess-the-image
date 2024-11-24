@@ -279,19 +279,32 @@ router.post('/api/questions/generate', async (req, res) => {
         // Generate a unique filename
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `generated-${timestamp}.png`;
-        const localPath = `/stored-images/${filename}`; // Base path for URLs
-        const fullPath = path.join(__dirname, '..', 'stored-images', filename);
+        const localPath = `/generated-images/${filename}`; 
+        const fullPath = path.join(__dirname, '..', 'generated-images', filename);
+
+        // Ensure generated-images directory exists
+        const generatedImagesDir = path.join(__dirname, '..', 'generated-images');
+        try {
+            await fs.access(generatedImagesDir);
+        } catch (error) {
+            console.log('Creating generated-images directory...');
+            await fs.mkdir(generatedImagesDir, { recursive: true });
+        }
 
         try {
             // Initialize OpenAI client
-            console.log('Initializing OpenAI with API key:', process.env.OPENAI_API_KEY ? 'Key exists' : 'No key found');
+            if (!process.env.OPENAI_API_KEY) {
+                throw new Error('OpenAI API key is not configured');
+            }
+
+            console.log('Initializing OpenAI...');
             const openai = new OpenAI({
                 apiKey: process.env.OPENAI_API_KEY
             });
 
             // If answers is a string, use it directly as the prompt
             const prompt = typeof answers === 'string' ? answers : answers.prompt || '';
-            console.log('Making OpenAI API call with prompt:', prompt);
+            console.log('Making OpenAI API call with prompt length:', prompt.length);
             
             const response = await openai.images.generate({
                 model: "dall-e-3",
@@ -301,22 +314,25 @@ router.post('/api/questions/generate', async (req, res) => {
                 quality: "standard",
                 response_format: "b64_json"
             });
-            console.log('OpenAI API response received:', response ? 'Response exists' : 'No response');
 
             if (!response.data || !response.data[0] || !response.data[0].b64_json) {
-                throw new Error('Invalid response from OpenAI: ' + JSON.stringify(response));
+                console.error('Invalid OpenAI response:', JSON.stringify(response, null, 2));
+                throw new Error('Invalid response from OpenAI');
             }
 
             // Convert base64 to image and save it
             const imageData = response.data[0].b64_json;
             console.log('Converting base64 to buffer...');
             const buffer = Buffer.from(imageData, 'base64');
+            
+            console.log('Writing file to:', fullPath);
             await fs.writeFile(fullPath, buffer);
+            console.log('File written successfully');
 
             // Save the image metadata with correct paths
             const imageMetadata = {
-                url: `/christmas${localPath}`, // Add /christmas for URLs
-                localPath: `/christmas${localPath}`, // Add /christmas for consistency
+                url: `/christmas${localPath}`, 
+                localPath: `/christmas${localPath}`, 
                 prompt: answers,
                 timestamp: new Date().toISOString(),
                 createdBy: answers["1"] || '', // Name
@@ -412,7 +428,7 @@ router.post('/api/images/delete', async (req, res) => {
 
         // Delete the actual file
         const filename = imageToDelete.localPath.split('/').pop();
-        const filePath = path.join(__dirname, '..', 'stored-images', filename);
+        const filePath = path.join(__dirname, '..', 'generated-images', filename);
         
         try {
             await fs.unlink(filePath);
