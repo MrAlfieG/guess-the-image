@@ -250,22 +250,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                         previewContainer.classList.add('d-none');
                     }
 
-                    // Display the generated image
-                    if (result.imageUrl) {
-                        const existingImage = document.querySelector('.generated-image');
-                        if (existingImage) {
-                            existingImage.remove();
-                        }
-                        
-                        const imageContainer = document.createElement('div');
-                        imageContainer.className = 'generated-image card mt-4';
-                        imageContainer.innerHTML = `
-                            <img src="${basePath}${result.imageUrl}" class="card-img-top" alt="Generated Image">
-                        `;
-                        form.parentNode.appendChild(imageContainer);
+                    // Clear the form
+                    form.reset();
+                    form.classList.remove('was-validated');
+
+                    // Remove any existing thank you message or generated image
+                    const existingImage = document.querySelector('.generated-image');
+                    if (existingImage) {
+                        existingImage.remove();
                     }
+                    const existingThankYou = document.querySelector('.thank-you-message');
+                    if (existingThankYou) {
+                        existingThankYou.remove();
+                    }
+
+                    // Create and display thank you message
+                    const thankYouContainer = document.createElement('div');
+                    thankYouContainer.className = 'thank-you-message card mt-4 text-center';
+                    thankYouContainer.innerHTML = `
+                        <div class="card-body">
+                            <h3 class="card-title text-success mb-3">Thank You!</h3>
+                            <p class="card-text">Your answers have been submitted successfully.</p>
+                        </div>
+                    `;
+                    form.parentNode.appendChild(thankYouContainer);
                     
-                    showToast('Image generated successfully!', 'success');
+                    showToast('Answers submitted successfully!', 'success');
                 } else {
                     throw new Error(result.error || 'Failed to generate image');
                 }
