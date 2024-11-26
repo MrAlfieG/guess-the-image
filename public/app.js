@@ -164,9 +164,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     if (!question) continue;
                     
-                    // If it's a select question, get the value from options
-                    if (question.type === 'select' && question.options[value]) {
-                        answers[name] = question.options[value];
+                    // If it's a select question, get the display text (key) from options
+                    if (question.type === 'select') {
+                        // Find the key (display text) that corresponds to this value
+                        const displayText = Object.entries(question.options)
+                            .find(([key, val]) => val === value)?.[0] || value;
+                        answers[name] = displayText;
                     } else {
                         answers[name] = value;
                     }
