@@ -77,6 +77,16 @@
                                 onchange="updateAdminSettings({autoDisplayNew: this.checked})">
                             <label class="form-check-label" for="autoDisplayToggle">Auto Display New</label>
                         </div>
+                        <div class="form-group">
+                            <select class="form-select" id="refreshTimeSelect" onchange="updateRefreshTime(this.value)">
+                                <option value="2">2 seconds</option>
+                                <option value="5">5 seconds</option>
+                                <option value="10" selected>10 seconds</option>
+                                <option value="15">15 seconds</option>
+                                <option value="30">30 seconds</option>
+                                <option value="60">60 seconds</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-3 text-end">
@@ -655,19 +665,38 @@
             });
         }
 
-        function startAutoRefresh() {
-            // Check for new images every 5 seconds
+        function updateRefreshTime(seconds) {
+            const ms = parseInt(seconds) * 1000;
             if (autoRefreshInterval) {
                 clearInterval(autoRefreshInterval);
             }
-            autoRefreshInterval = setInterval(async () => {
-                const currentCount = images.length;
-                await loadImages();
-                if (images.length > currentCount) {
-                    showToast('New images have been added!');
-                    updateImageGrid();
+            updateAdminSettings({ refreshTime: parseInt(seconds) });
+            startAutoRefresh();
+        }
+
+        async function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            try {
+                const response = await fetch('/christmas/api/admin-settings');
+                const settings = await response.json();
+                const refreshTime = (settings.refreshTime || 10) * 1000; // default to 10 seconds
+                
+                // Update the select box to match the stored setting
+                const selectBox = document.getElementById('refreshTimeSelect');
+                if (selectBox) {
+                    selectBox.value = settings.refreshTime || 10;
                 }
-            }, 5000);
+                
+                autoRefreshInterval = setInterval(() => {
+                    loadCurrentDisplayImage();
+                }, refreshTime);
+                
+            } catch (error) {
+                console.error('Error loading refresh time setting:', error);
+            }
         }
 
         // Clean up interval when leaving the page
