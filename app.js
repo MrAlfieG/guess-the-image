@@ -60,6 +60,9 @@ app.use(basePath + '/generated-images', express.static(path.join(__dirname, 'gen
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Mount the config routes with basePath
+app.use(basePath, configModule);
+
 // Authentication middleware
 function requireAuth(req, res, next) {
     if (req.session.isAuthenticated) {
@@ -94,7 +97,7 @@ app.post(basePath + '/api/upload-images', requireAuth, upload.array('images'), a
             const imageMetadata = {
                 url: `${basePath}/generated-images/${file.filename}`,
                 createdAt: new Date().toISOString(),
-                createdBy: 'Admin Upload',
+                createdBy: 'Upload',
                 timestamp: Date.now()
             };
             images.push(imageMetadata);
@@ -110,7 +113,7 @@ app.post(basePath + '/api/upload-images', requireAuth, upload.array('images'), a
                 const lastFile = uploadedFiles[uploadedFiles.length - 1];
                 const displayImage = {
                     url: `${basePath}/generated-images/${lastFile.filename}`,
-                    createdBy: 'Admin Upload',
+                    createdBy: 'Upload',
                     showCreatedBy: false,
                     showDetails: false
                 };
@@ -129,9 +132,6 @@ app.post(basePath + '/api/upload-images', requireAuth, upload.array('images'), a
         res.status(500).json({ error: 'Failed to process uploaded files: ' + error.message });
     }
 });
-
-// Routes
-app.use(basePath, configModule);
 
 // Serve HTML files
 app.get(basePath, async (req, res) => {
