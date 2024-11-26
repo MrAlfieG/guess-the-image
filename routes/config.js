@@ -289,12 +289,12 @@ async function getOpenAIKey() {
 // Generate image from answers
 router.post('/api/questions/generate', async (req, res) => {
     try {
-        const { answers } = req.body;
+        const { prompt, answers } = req.body;
         
-        if (!answers) {
+        if (!prompt) {
             return res.status(400).json({ 
                 success: false,
-                error: 'No answers provided' 
+                error: 'No prompt provided' 
             });
         }
 
@@ -322,9 +322,7 @@ router.post('/api/questions/generate', async (req, res) => {
                 apiKey: apiKey
             });
 
-            // If answers is a string, use it directly as the prompt
-            const prompt = typeof answers === 'string' ? answers : answers.prompt || '';
-            console.log('Making OpenAI API call with prompt length:', prompt.length);
+            console.log('Making OpenAI API call with prompt:', prompt);
             
             const response = await openai.images.generate({
                 model: "dall-e-3",
@@ -353,7 +351,7 @@ router.post('/api/questions/generate', async (req, res) => {
             const imageMetadata = {
                 url: `/christmas${localPath}`, 
                 localPath: `/christmas${localPath}`, 
-                prompt: answers,
+                prompt: prompt,
                 timestamp: new Date().toISOString(),
                 createdBy: answers["question-1"] || '', // Name
                 posterType: answers["question-2"] || '', // Poster type

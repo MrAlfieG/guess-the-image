@@ -159,6 +159,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 // Process each form field
                 for (let [name, value] of formData.entries()) {
+                    if (!value.trim()) continue;  // Skip empty values
+                    
                     const questionId = parseInt(name.replace('question-', ''));
                     const question = questionMap[questionId];
                     
@@ -227,7 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const result = await generatePrompt();
                 
-                if (!result) {
+                if (!result || !result.prompt) {
                     showToast('Please fill in at least one field to generate an image.', 'danger');
                     return;
                 }
