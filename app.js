@@ -134,12 +134,32 @@ app.post(basePath + '/api/upload-images', requireAuth, upload.array('images'), a
 app.use(basePath, configModule);
 
 // Serve HTML files
-app.get(basePath, (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+app.get(basePath, async (req, res) => {
+    try {
+        const settings = await configModule.loadAdminSettings();
+        if (!settings.quizActive) {
+            res.sendFile(path.join(__dirname, 'waiting.html'));
+        } else {
+            res.sendFile(path.join(__dirname, 'index.html'));
+        }
+    } catch (error) {
+        console.error('Error checking quiz status:', error);
+        res.sendFile(path.join(__dirname, 'index.html'));
+    }
 });
 
-app.get(basePath + '/prompt', (req, res) => {
-    res.sendFile(path.join(__dirname, 'prompt.html'));
+app.get(basePath + '/prompt', async (req, res) => {
+    try {
+        const settings = await configModule.loadAdminSettings();
+        if (!settings.quizActive) {
+            res.sendFile(path.join(__dirname, 'waiting.html'));
+        } else {
+            res.sendFile(path.join(__dirname, 'prompt.html'));
+        }
+    } catch (error) {
+        console.error('Error checking quiz status:', error);
+        res.sendFile(path.join(__dirname, 'prompt.html'));
+    }
 });
 
 app.get(basePath + '/admin', (req, res) => {
