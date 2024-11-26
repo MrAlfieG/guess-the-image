@@ -131,7 +131,7 @@ app.post(basePath + '/api/upload-images', requireAuth, upload.array('images'), a
 });
 
 // Routes
-app.use(basePath, configModule.router);
+app.use(basePath, configModule);
 
 // Serve HTML files
 app.get(basePath, (req, res) => {

@@ -470,15 +470,15 @@ router.post('/api/images/delete', async (req, res) => {
     }
 });
 
-module.exports = {
-    router,
-    loadImagesData,
-    saveImagesData,
-    loadDisplayImage,
-    saveDisplayImage,
-    loadAdminSettings,
-    saveAdminSettings,
-    loadQuestions,
-    saveQuestions,
-    generateQuestions
-};
+// Export the router
+module.exports = router;
+
+// Also export the utility functions
+module.exports.loadImagesData = loadImagesData;
+module.exports.saveImagesData = saveImagesData;
+module.exports.loadDisplayImage = loadDisplayImage;
+module.exports.saveDisplayImage = saveDisplayImage;
+module.exports.loadAdminSettings = loadAdminSettings;
+module.exports.saveAdminSettings = saveAdminSettings;
+module.exports.loadQuestions = loadQuestions;
+module.exports.saveQuestions = saveQuestions;
