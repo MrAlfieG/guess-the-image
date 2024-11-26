@@ -276,8 +276,8 @@ async function getOpenAIKey() {
         const configPath = path.join(__dirname, '..', 'config.json');
         const configData = await fs.readFile(configPath, 'utf8');
         const config = JSON.parse(configData);
-        if (config.OPENAI_API_KEY) {
-            return config.OPENAI_API_KEY;
+        if (config.openai && config.openai.apiKey) {
+            return config.openai.apiKey;
         }
     } catch (error) {
         console.error('Error reading config.json:', error);
