@@ -289,9 +289,9 @@ async function getOpenAIKey() {
 // Generate image from answers
 router.post('/api/questions/generate', async (req, res) => {
     try {
-        const { answers } = req.body;
+        const { prompt, answers } = req.body;
         
-        if (!answers) {
+        if (!prompt) {
             return res.status(400).json({ 
                 success: false,
                 error: 'No answers provided' 
@@ -322,13 +322,11 @@ router.post('/api/questions/generate', async (req, res) => {
                 apiKey: apiKey
             });
 
-            // If answers is a string, use it directly as the prompt
-            const prompt = typeof answers === 'string' ? answers : answers.prompt || '';
-            console.log('Making OpenAI API call with prompt length:', prompt.length);
+            console.log('Making OpenAI API call with prompt:', prompt);
             
             const response = await openai.images.generate({
                 model: "dall-e-3",
-                prompt: prompt,
+                prompt: prompt.prompt,  // Use the prompt string from the prompt object
                 n: 1,
                 size: "1024x1024",
                 quality: "standard",
@@ -353,19 +351,19 @@ router.post('/api/questions/generate', async (req, res) => {
             const imageMetadata = {
                 url: `/christmas${localPath}`, 
                 localPath: `/christmas${localPath}`, 
-                prompt: answers,
+                prompt: prompt.prompt,
                 timestamp: new Date().toISOString(),
-                createdBy: answers["1"] || '', // Name
-                posterType: answers["2"] || '', // Poster type
-                style: answers["3"] || '', // Style
-                artStyle: answers["4"] || '', // Art style
-                animal: answers["5"] || '', // Animal
-                action: answers["6"] || '', // Action
-                holding: answers["7"] || '', // Holding
-                weather: answers["8"] || '', // Weather
-                location: answers["9"] || '', // Location
-                food: answers["10"] || '', // Food
-                christmasItem: answers["11"] || '' // Christmas list item
+                createdBy: answers[1] || '', // Get name from answers by ID
+                posterType: answers[2] || '',
+                style: answers[3] || '',
+                artStyle: answers[4] || '',
+                animal: answers[5] || '',
+                action: answers[6] || '',
+                holding: answers[7] || '',
+                weather: answers[8] || '',
+                location: answers[9] || '',
+                food: answers[10] || '',
+                christmasItem: answers[11] || ''
             };
 
             // Add to generated-images.json
@@ -379,8 +377,8 @@ router.post('/api/questions/generate', async (req, res) => {
                 await saveDisplayImage({
                     url: imageMetadata.url,
                     createdBy: imageMetadata.createdBy,
-                    showCreatedBy: (await loadDisplayImage())?.showCreatedBy || false,
-                    showDetails: (await loadDisplayImage())?.showDetails || false
+                    showCreatedBy: false,
+                    showDetails: false
                 });
             }
 
