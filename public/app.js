@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
                 
-                return prompt;
+                return { prompt, answers };  // Return both prompt and answers
             } catch (error) {
                 console.error('Error generating prompt:', error);
                 showToast('Error generating prompt', 'danger');
@@ -225,9 +225,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
 
             try {
-                const prompt = await generatePrompt();
+                const result = await generatePrompt();
                 
-                if (!prompt) {
+                if (!result) {
                     showToast('Please fill in at least one field to generate an image.', 'danger');
                     return;
                 }
@@ -237,16 +237,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ answers: prompt })
+                    body: JSON.stringify(result)  // Send both prompt and answers
                 });
 
                 if (!response.ok) {
                     throw new Error('Failed to generate image');
                 }
 
-                const result = await response.json();
+                const resultData = await response.json();
                 
-                if (result.success) {
+                if (resultData.success) {
                     // Clear the preview
                     const previewContainer = document.getElementById('prompt-preview');
                     if (previewContainer) {
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     
                     showToast('Answers submitted successfully!', 'success');
                 } else {
-                    throw new Error(result.error || 'Failed to generate image');
+                    throw new Error(resultData.error || 'Failed to generate image');
                 }
             } catch (error) {
                 console.error('Error:', error);
