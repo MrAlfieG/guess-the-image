@@ -74,12 +74,12 @@ async function loadAdminSettings() {
         return JSON.parse(data);
     } catch (error) {
         if (error.code === 'ENOENT') {
-            const defaultSettings = { autoDisplayNew: false };
+            const defaultSettings = { autoDisplayNew: false, quizActive: true };
             await saveAdminSettings(defaultSettings);
             return defaultSettings;
         }
         console.error('Error loading admin settings:', error);
-        return { autoDisplayNew: false };
+        return { autoDisplayNew: false, quizActive: true };
     }
 }
 
@@ -247,6 +247,32 @@ router.post('/api/admin/settings', async (req, res) => {
         const updatedSettings = { ...settings, ...req.body };
         await saveAdminSettings(updatedSettings);
         res.json({ success: true, message: 'Admin settings updated' });
+    } catch (error) {
+        console.error('Error updating admin settings:', error);
+        res.status(500).json({ error: 'Failed to update admin settings' });
+    }
+});
+
+// Get admin settings endpoint
+router.get('/api/admin-settings', async (req, res) => {
+    try {
+        const settings = await loadAdminSettings();
+        res.json(settings);
+    } catch (error) {
+        console.error('Error getting admin settings:', error);
+        res.status(500).json({ error: 'Failed to get admin settings' });
+    }
+});
+
+// Update admin settings endpoint
+router.post('/api/admin-settings', async (req, res) => {
+    try {
+        const settings = req.body;
+        if (!settings) {
+            return res.status(400).json({ error: 'No settings provided' });
+        }
+        await saveAdminSettings(settings);
+        res.json({ success: true });
     } catch (error) {
         console.error('Error updating admin settings:', error);
         res.status(500).json({ error: 'Failed to update admin settings' });
